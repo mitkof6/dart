@@ -215,20 +215,22 @@ public:
     /// @brief
     Marker* getMarker(int _idx) const;
 
-    /// @brief Test whether this dof is dependent or not.
+    /// @brief Test whether this generalized coordinate is dependent or not.
     /// @return True if this body node is dependent on the generalized
     ///         coordinate.
     /// @param[in] _genCoordIndex Index of generalized coordinate in the
     ///                           skeleton.
-    /// @warning You may want to use getNumDependentDofs / getDependentDof for
-    ///          efficiency.
+    /// @warning You may want to use getNumDependentGenCoords or
+    ///          getDependentGenCoord for efficiency.
     bool dependsOn(int _genCoordIndex) const;
 
-    /// @brief The number of the dofs by which this node is affected.
-    int getNumDependentDofs() const;
+    /// @brief The number of the generalized coordinates by which this node is
+    ///        affected.
+    int getNumDependentGenCoords() const;
 
-    /// @brief Return an dof index from the array index (< getNumDependentDofs).
-    int getDependentDof(int _arrayIndex) const;
+    /// @brief Return a generalized coordinate index from the array index
+    ///        (< getNumDependentDofs).
+    int getDependentGenCoord(int _arrayIndex) const;
 
     //--------------------------------------------------------------------------
     // Properties updated by dynamics (kinematics)
@@ -480,7 +482,7 @@ protected:
     std::vector<Marker*> mMarkers;
 
     /// @brief A list of dependent dof indices
-    std::vector<int> mDependentDofIndexes;
+    std::vector<int> mDependentGenCoordIndices;
 
     //--------------------------------------------------------------------------
     // Dynamical Properties

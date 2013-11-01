@@ -189,19 +189,20 @@ Marker* BodyNode::getMarker(int _idx) const
 
 bool BodyNode::dependsOn(int _genCoordIndex) const
 {
-    return binary_search(mDependentDofIndexes.begin(),
-                         mDependentDofIndexes.end(),
+    return binary_search(mDependentGenCoordIndices.begin(),
+                         mDependentGenCoordIndices.end(),
                          _genCoordIndex);
 }
 
-int BodyNode::getNumDependentDofs() const
+int BodyNode::getNumDependentGenCoords() const
 {
-    return mDependentDofIndexes.size();
+    return mDependentGenCoordIndices.size();
 }
 
-int BodyNode::getDependentDof(int _arrayIndex) const
+int BodyNode::getDependentGenCoord(int _arrayIndex) const
 {
-    return mDependentDofIndexes[_arrayIndex];
+    assert(0 <= _arrayIndex && _arrayIndex < mDependentGenCoordIndices.size());
+    return mDependentGenCoordIndices[_arrayIndex];
 }
 
 const Eigen::Isometry3d& BodyNode::getWorldTransform() const
@@ -279,17 +280,17 @@ void BodyNode::init(Skeleton* _skeleton, int _skeletonIndex)
 
     // fill list of generalized coordinates this node depends on
     if (mParentBodyNode)
-        mDependentDofIndexes = mParentBodyNode->mDependentDofIndexes;
+        mDependentGenCoordIndices = mParentBodyNode->mDependentGenCoordIndices;
     else
-        mDependentDofIndexes.clear();
+        mDependentGenCoordIndices.clear();
     for (int i = 0; i < mParentJoint->getNumGenCoords(); i++)
-        mDependentDofIndexes.push_back(mParentJoint->getGenCoord(i)->getSkeletonIndex());
+        mDependentGenCoordIndices.push_back(mParentJoint->getGenCoord(i)->getSkeletonIndex());
 
 #ifndef NDEBUG
-    for (int i = 0; i < (int)mDependentDofIndexes.size() - 1; i++)
+    for (int i = 0; i < (int)mDependentGenCoordIndices.size() - 1; i++)
     {
-        for (int j = i + 1; j < mDependentDofIndexes.size(); j++)
-            if (mDependentDofIndexes[i] == mDependentDofIndexes[j])
+        for (int j = i + 1; j < mDependentGenCoordIndices.size(); j++)
+            if (mDependentGenCoordIndices[i] == mDependentGenCoordIndices[j])
             {
                 dterr << "Skeleton ID of Generalized coordinates is duplicated."
                       << std::endl;
@@ -297,7 +298,7 @@ void BodyNode::init(Skeleton* _skeleton, int _skeletonIndex)
     }
 #endif
 
-    const int numDepDofs = getNumDependentDofs();
+    const int numDepDofs = getNumDependentGenCoords();
     mBodyJacobian      = math::Jacobian::Zero(6,numDepDofs);
     mBodyJacobianTimeDeriv = math::Jacobian::Zero(6,numDepDofs);
     mM                 = Eigen::MatrixXd::Zero(numDepDofs, numDepDofs);
@@ -387,7 +388,7 @@ void BodyNode::updateTransform(bool _updateJacobian)
     //--------------------------------------------------------------------------
 
     const int numLocalDOFs = mParentJoint->getNumGenCoords();
-    const int numParentDOFs = getNumDependentDofs()-numLocalDOFs;
+    const int numParentDOFs = getNumDependentGenCoords()-numLocalDOFs;
 
     // Parent Jacobian
     if (mParentBodyNode != NULL)
@@ -467,7 +468,7 @@ void BodyNode::updateEta(bool _updateJacobianDeriv)
     //--------------------------------------------------------------------------
 
     const int numLocalDOFs = mParentJoint->getNumGenCoords();
-    const int numParentDOFs = getNumDependentDofs() - numLocalDOFs;
+    const int numParentDOFs = getNumDependentGenCoords() - numLocalDOFs;
 
     // Parent Jacobian
     if (mParentBodyNode != NULL)
@@ -877,8 +878,8 @@ void BodyNode::aggregateExternalForces(Eigen::VectorXd& _Fext)
 
     Eigen::VectorXd localForce = mBodyJacobian.transpose() * mFext;
 
-    for(int i = 0; i < getNumDependentDofs(); i++)
-        _Fext(mDependentDofIndexes[i]) += localForce(i);
+    for(int i = 0; i < getNumDependentGenCoords(); i++)
+        _Fext(mDependentGenCoordIndices[i]) += localForce(i);
 }
 
 void BodyNode::aggregateMassMatrix(Eigen::MatrixXd& _M)
@@ -888,9 +889,9 @@ void BodyNode::aggregateMassMatrix(Eigen::MatrixXd& _M)
                                         mBodyJacobian;
     mM.triangularView<Eigen::StrictlyLower>() = mM.transpose();
 
-    for(int i = 0; i < getNumDependentDofs(); i++)
-        for(int j = 0; j < getNumDependentDofs(); j++)
-            _M(mDependentDofIndexes[i], mDependentDofIndexes[j]) += mM(i, j);
+    for(int i = 0; i < getNumDependentGenCoords(); i++)
+        for(int j = 0; j < getNumDependentGenCoords(); j++)
+            _M(mDependentGenCoordIndices[i], mDependentGenCoordIndices[j]) += mM(i, j);
 }
 
 void BodyNode::_updateGeralizedInertia()
