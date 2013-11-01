@@ -87,7 +87,6 @@ void JOINTS::kinematicsTest(Joint* _joint)
     //--------------------------------------------------------------------------
     VectorXd q = VectorXd::Zero(dof);
     VectorXd dq = VectorXd::Zero(dof);
-    VectorXd ddq = VectorXd::Zero(dof);
 
     for (int idxTest = 0; idxTest < 100; ++idxTest)
     {
@@ -97,17 +96,12 @@ void JOINTS::kinematicsTest(Joint* _joint)
         {
             q(i) = random(-DART_PI, DART_PI);
             dq(i) = random(-DART_PI, DART_PI);
-            ddq(i) = random(-DART_PI, DART_PI);
         }
 
-        _joint->set_q(q);
-        _joint->set_dq(dq);
-        _joint->set_ddq(ddq);
-
-        bodyNode->updateTransform();
-        bodyNode->updateVelocity();
-        bodyNode->updateEta();
-        bodyNode->updateAcceleration();
+        Eigen::VectorXd state = Eigen::VectorXd::Zero(2*dof);
+        state.head(dof) = q;
+        state.tail(dof) = dq;
+        skeleton.setState(state);
 
         if (_joint->getNumGenCoords() == 0)
             return;
@@ -131,14 +125,14 @@ void JOINTS::kinematicsTest(Joint* _joint)
             // a
             Eigen::VectorXd q_a = q;
             _joint->set_q(q_a);
-            bodyNode->updateTransform();
+            skeleton.setConfig(q_a);
             Eigen::Isometry3d T_a = _joint->getLocalTransform();
 
             // b
             Eigen::VectorXd q_b = q;
             q_b(i) += dt;
             _joint->set_q(q_b);
-            bodyNode->updateTransform();
+            skeleton.setConfig(q_b);
             Eigen::Isometry3d T_b = _joint->getLocalTransform();
 
             //
@@ -177,14 +171,14 @@ void JOINTS::kinematicsTest(Joint* _joint)
             // a
             Eigen::VectorXd q_a = q;
             _joint->set_q(q_a);
-            bodyNode->updateTransform(true);
+            skeleton.setConfig(q_a);
             Jacobian J_a = _joint->getLocalJacobian();
 
             // b
             Eigen::VectorXd q_b = q;
             q_b(i) += dt;
             _joint->set_q(q_b);
-            bodyNode->updateTransform(true);
+            skeleton.setConfig(q_b);
             Jacobian J_b = _joint->getLocalJacobian();
 
             //

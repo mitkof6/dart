@@ -73,9 +73,8 @@ Runge-Kutta and fourth-order Runge Kutta.
 #ifndef DART_DYNAMICS_BODYNODE_H
 #define DART_DYNAMICS_BODYNODE_H
 
-#include <Eigen/StdVector>
-
 #include <Eigen/Dense>
+#include <Eigen/StdVector>
 
 #include "math/Geometry.h"
 
@@ -369,10 +368,13 @@ public:
                      const Eigen::Vector4d& _color = Eigen::Vector4d::Ones(),
                      bool _useDefaultColor = true) const;
 
+protected:
+    /// @brief Initialize the vector memebers with proper sizes.
+    void init(Skeleton* _skeleton, int _skeletonIndex);
+
     //--------------------------------------------------------------------------
     // Sub-functions for Recursive Kinematics Algorithms
     //--------------------------------------------------------------------------
-
     /// @brief Update local transformations and world transformations.
     void updateTransform(bool _updateJacobian = true);
 
@@ -414,10 +416,6 @@ public:
 
     /// @brief
     void aggregateMassMatrix(Eigen::MatrixXd& M);
-
-protected:
-    /// @brief Initialize the vector memebers with proper sizes.
-    void init(Skeleton* _skeleton, int _skeletonIndex);
 
     //--------------------------------------------------------------------------
     // General properties
