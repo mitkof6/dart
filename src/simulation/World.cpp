@@ -109,15 +109,6 @@ void World::setControlInput()
 #define USE_FEATHERSTONE 1
 Eigen::VectorXd World::evalDeriv()
 {
-    // Calculate M(q), M^{-1}(q)
-    for (std::vector<dynamics::Skeleton*>::iterator itrSkeleton = mSkeletons.begin();
-         itrSkeleton != mSkeletons.end();
-         ++itrSkeleton)
-    {
-        (*itrSkeleton)->computeEquationsOfMotionID(mGravity);
-        //(*itrSkeleton)->computeEquationsOfMotionFS(mGravity);
-    }
-
     // compute constraint (contact/contact, joint limit) forces
     mConstraintHandler->computeConstraintForces();
 
@@ -129,11 +120,11 @@ Eigen::VectorXd World::evalDeriv()
             continue;
 
 #ifdef USE_FEATHERSTONE
-        mSkeletons[i]->setConstraintForces(
+        mSkeletons[i]->setConstraintForceVector(
                     mConstraintHandler->getTotalConstraintForce(i) -
                     mConstraintHandler->getContactForce(i));
 #else
-        mSkeletons[i]->setConstraintForces(
+        mSkeletons[i]->setConstraintForceVector(
                     mConstraintHandler->getTotalConstraintForce(i));
 #endif
     }
@@ -144,9 +135,9 @@ Eigen::VectorXd World::evalDeriv()
          ++itrSkeleton)
     {
 #ifdef USE_FEATHERSTONE
-        (*itrSkeleton)->computeForwardDynamicsFS(mGravity, mTimeStep);
+        (*itrSkeleton)->computeForwardDynamicsFS();
 #else
-        (*itrSkeleton)->computeForwardDynamicsID(mGravity);
+        (*itrSkeleton)->computeForwardDynamicsID();
 #endif
     }
 
@@ -155,7 +146,7 @@ Eigen::VectorXd World::evalDeriv()
     for (unsigned int i = 0; i < getNumSkeletons(); i++)
     {
         // skip immobile objects in forward simulation
-        if (!mSkeletons[i]->isMobile())
+        if (!mSkeletons[i]->isMobile() || mSkeletons[i]->getNumGenCoords() == 0)
             continue;
 
         int start = mIndices[i] * 2;
@@ -173,8 +164,15 @@ Eigen::VectorXd World::evalDeriv()
 
 void World::setTimeStep(double _timeStep)
 {
+    assert(_timeStep > 0.0 && "Invalid timestep.");
+
     mTimeStep = _timeStep;
     mConstraintHandler->setTimeStep(_timeStep);
+    for (std::vector<dynamics::Skeleton*>::iterator it = mSkeletons.begin();
+         it != mSkeletons.end(); ++it)
+    {
+        (*it)->setTimeStep(_timeStep);
+    }
 }
 
 double World::getTimeStep() const
@@ -189,8 +187,8 @@ void World::step()
     for (std::vector<dynamics::Skeleton*>::iterator itr = mSkeletons.begin();
          itr != mSkeletons.end(); ++itr)
     {
-        (*itr)->clearInternalForces();
-        (*itr)->clearExternalForces();
+        (*itr)->clearInternalForceVector();
+        (*itr)->clearExternalForceVector();
     }
 
     mTime += mTimeStep;
@@ -215,6 +213,11 @@ int World::getSimFrames() const
 void World::setGravity(const Eigen::Vector3d& _gravity)
 {
     mGravity = _gravity;
+    for (std::vector<dynamics::Skeleton*>::iterator it = mSkeletons.begin();
+         it != mSkeletons.end(); ++it)
+    {
+        (*it)->setGravity(_gravity);
+    }
 }
 
 const Eigen::Vector3d&World::getGravity() const
@@ -260,8 +263,7 @@ void World::addSkeleton(dynamics::Skeleton* _skeleton)
     }
 
     mSkeletons.push_back(_skeleton);
-    _skeleton->init();
-    _skeleton->computeEquationsOfMotionID(mGravity);
+    _skeleton->init(mTimeStep, mGravity);
     mIndices.push_back(mIndices.back() + _skeleton->getNumGenCoords());
     mConstraintHandler->addSkeleton(_skeleton);
 }

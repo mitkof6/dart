@@ -73,11 +73,11 @@ public:
 /******************************************************************************/
 void JOINTS::kinematicsTest(Joint* _joint)
 {
-    BodyNode bodyNode;
-    bodyNode.setParentJoint(_joint);
+    BodyNode* bodyNode = new BodyNode();
+    bodyNode->setParentJoint(_joint);
 
     Skeleton skeleton;
-    skeleton.addBodyNode(&bodyNode);
+    skeleton.addBodyNode(bodyNode);
     skeleton.init();
 
     int dof = _joint->getNumGenCoords();
@@ -104,10 +104,10 @@ void JOINTS::kinematicsTest(Joint* _joint)
         _joint->set_dq(dq);
         _joint->set_ddq(ddq);
 
-        bodyNode.updateTransform();
-        bodyNode.updateVelocity();
-        bodyNode.updateEta();
-        bodyNode.updateAcceleration();
+        bodyNode->updateTransform();
+        bodyNode->updateVelocity();
+        bodyNode->updateEta();
+        bodyNode->updateAcceleration();
 
         if (_joint->getNumGenCoords() == 0)
             return;
@@ -131,14 +131,14 @@ void JOINTS::kinematicsTest(Joint* _joint)
             // a
             Eigen::VectorXd q_a = q;
             _joint->set_q(q_a);
-            bodyNode.updateTransform();
+            bodyNode->updateTransform();
             Eigen::Isometry3d T_a = _joint->getLocalTransform();
 
             // b
             Eigen::VectorXd q_b = q;
             q_b(i) += dt;
             _joint->set_q(q_b);
-            bodyNode.updateTransform();
+            bodyNode->updateTransform();
             Eigen::Isometry3d T_b = _joint->getLocalTransform();
 
             //
@@ -174,18 +174,17 @@ void JOINTS::kinematicsTest(Joint* _joint)
         Jacobian numeric_dJ = Jacobian::Zero(6,dof);
         for (int i = 0; i < dof; ++i)
         {
-
             // a
             Eigen::VectorXd q_a = q;
             _joint->set_q(q_a);
-            bodyNode.updateVelocity();
+            bodyNode->updateTransform(true);
             Jacobian J_a = _joint->getLocalJacobian();
 
             // b
             Eigen::VectorXd q_b = q;
             q_b(i) += dt;
             _joint->set_q(q_b);
-            bodyNode.updateVelocity();
+            bodyNode->updateTransform(true);
             Jacobian J_b = _joint->getLocalJacobian();
 
             //

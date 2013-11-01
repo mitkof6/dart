@@ -374,21 +374,18 @@ public:
     //--------------------------------------------------------------------------
 
     /// @brief Update local transformations and world transformations.
-    /// T(i-1,i), W(i)
-    void updateTransform();
+    void updateTransform(bool _updateJacobian = true);
 
     /// @brief
-    /// parentJoint.V, parentBody.V --> V
-    /// parentJoint.S --> J
-    void updateVelocity(bool _updateJacobian = true);
+    void updateVelocity();
 
     /// @brief
-    void updateEta();
+    /// parentJoint.dS --> dJ
+    void updateEta(bool _updateJacobianDeriv = false);
 
     /// @brief
     /// parentJoint.V, parentJoint.dV, parentBody.dV, V --> dV
-    /// parentJoint.dS --> dJ
-    void updateAcceleration(bool _updateJacobianDeriv = false);
+    void updateAcceleration();
 
     /// @brief
     /// childBodies.F, V, dV --> F, Fgravity
@@ -400,16 +397,7 @@ public:
     void updateGeneralizedForce(bool _withDampingForces = false);
 
     /// @brief
-    void updateArticulatedInertia();
-
-    /// @brief
-    void updatePsi(double _timeStep);
-
-    /// @brief
-    void updatePi();
-
-    /// @brief
-    void updateBeta();
+    void updateArticulatedInertia(double _timeStep);
 
     /// @brief
     void updateBiasForce(const Eigen::Vector3d& _gravity);
@@ -420,18 +408,12 @@ public:
     /// @brief
     void update_F_fs();
 
-    /// @brief
-    void updateDampingForce();
-
-    /// @brief Updates the mass matrix mM
-    void updateMassMatrix();
-
     /// @brief Aggregate the external forces mFext in the generalized
     ///        coordinates recursively.
-    void aggregateExternalForces(Eigen::VectorXd& _extForce);
+    void aggregateExternalForces(Eigen::VectorXd& _Fext);
 
     /// @brief
-    void aggregateMass(Eigen::MatrixXd& M);
+    void aggregateMassMatrix(Eigen::MatrixXd& M);
 
 protected:
     /// @brief Initialize the vector memebers with proper sizes.
