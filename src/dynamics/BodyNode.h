@@ -348,14 +348,15 @@ public:
     /// @brief
     const Eigen::Vector6d& getBodyForce() const;
 
-    /// @brief
+    /// @brief Get kinetic energy.
     double getKineticEnergy() const;
 
-    /// @brief
-    Eigen::Vector3d evalLinMomentum() const;
+    /// @brief Get linear momentum.
+    Eigen::Vector3d getLinearMomentum() const;
 
-    /// @brief
-    Eigen::Vector3d evalAngMomentum(Eigen::Vector3d _pivot);
+    /// @brief Get angular momentum.
+    Eigen::Vector3d getAngularMomentum(
+            const Eigen::Vector3d& _pivot = Eigen::Vector3d::Zero());
 
     //--------------------------------------------------------------------------
     // Rendering

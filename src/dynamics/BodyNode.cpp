@@ -709,12 +709,12 @@ double BodyNode::getKineticEnergy() const
     return 0.5 * mV.dot(mI * mV);
 }
 
-Eigen::Vector3d BodyNode::evalLinMomentum() const
+Eigen::Vector3d BodyNode::getLinearMomentum() const
 {
     return (mI * mV).tail<3>();
 }
 
-Eigen::Vector3d BodyNode::evalAngMomentum(Eigen::Vector3d _pivot)
+Eigen::Vector3d BodyNode::getAngularMomentum(const Eigen::Vector3d& _pivot)
 {
     Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
     T.translation() = _pivot;
