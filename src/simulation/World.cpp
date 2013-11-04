@@ -116,7 +116,7 @@ Eigen::VectorXd World::evalDeriv()
     for (unsigned int i = 0; i < getNumSkeletons(); i++)
     {
         // skip immobile objects in forward simulation
-        if (!mSkeletons[i]->isMobile())
+        if (!mSkeletons[i]->isMobile() || mSkeletons[i]->getNumGenCoords() == 0)
             continue;
 
 #ifdef USE_FEATHERSTONE

@@ -372,7 +372,7 @@ public:
                      bool _useDefaultColor = true) const;
 
 protected:
-    /// @brief Initialize the vector memebers with proper sizes.
+    /// @brief Initialize the vector members with proper sizes.
     void init(Skeleton* _skeleton, int _skeletonIndex);
 
     //--------------------------------------------------------------------------
@@ -413,12 +413,27 @@ protected:
     /// @brief
     void update_F_fs();
 
+    /// @brief
+    void updateZ();
+
     /// @brief Aggregate the external forces mFext in the generalized
     ///        coordinates recursively.
     void aggregateExternalForces(Eigen::VectorXd& _Fext);
 
     /// @brief
-    void aggregateMassMatrix(Eigen::MatrixXd& M);
+    void aggregateMassMatrix_OLD(Eigen::MatrixXd& M);
+    void aggregateMassMatrix(Eigen::MatrixXd& _M);
+
+    /// @brief
+    void update_O_P_Z();
+    void aggregateInvMassMatrix(Eigen::MatrixXd& _MInv);
+
+    /// @brief
+    void updateW();
+
+    /// @brief
+    void aggregateCombinedVector(Eigen::VectorXd& _Cg,
+                                 const Eigen::Vector3d& _gravity);
 
     //--------------------------------------------------------------------------
     // General properties
@@ -479,10 +494,17 @@ protected:
     /// @brief
     std::vector<BodyNode*> mChildBodyNodes;
 
+    /// @brief The list of descendants of this body node including child body
+    ///        nodes.
+    std::vector<BodyNode*> mDescendantBodyNodes;
+
+    /// @brief
+    std::vector<BodyNode*> mNephewAndYoungerBrotherBodyNodes;
+
     /// @brief List of markers associated
     std::vector<Marker*> mMarkers;
 
-    /// @brief A list of dependent dof indices
+    /// @brief A increasingly sorted list of dependent dof indices.
     std::vector<int> mDependentGenCoordIndices;
 
     //--------------------------------------------------------------------------
@@ -515,13 +537,38 @@ protected:
     /// @brief
     Eigen::Vector6d mFgravity;
 
-    math::Inertia mAI;      ///< Articulated inertia
-    Eigen::Vector6d mB;          ///< Bias force
-    Eigen::MatrixXd mAI_S;
+    /// @brief Articulated inertia
+    math::Inertia mAI;
+
+    /// @brief Bias force
+    Eigen::Vector6d mB;
+
+    /// @brief
+    math::Jacobian mAI_S;
+
+    /// @brief
     Eigen::MatrixXd mPsi;
+
+    /// @brief
+    Eigen::MatrixXd mPsiK;
+
+    /// @brief
     math::Inertia mPi;
+
+    /// @brief
     Eigen::VectorXd mAlpha;
+
+    /// @brief
     Eigen::Vector6d mBeta;
+
+    math::Inertia mIt;
+    math::Inertia mA;
+    math::Jacobian mO;
+    Eigen::MatrixXd mP;
+    math::Inertia mY;
+    math::Jacobian mZ;
+    Eigen::Vector6d mW2;
+    Eigen::Vector6d mH;
 
     /// @brief
     Eigen::MatrixXd mM;
@@ -530,6 +577,7 @@ protected:
     std::vector<Eigen::Vector6d, Eigen::aligned_allocator<Eigen::Vector6d> > mContactForces;
 
 private:
+    /// @brief
     void _updateGeralizedInertia();
 
 public:

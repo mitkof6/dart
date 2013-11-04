@@ -36,6 +36,9 @@
  *   POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <queue>
+#include <boost/math/special_functions/fpclassify.hpp>
+
 #include "math/Geometry.h"
 #include "math/Helpers.h"
 #include "dynamics/BodyNode.h"
@@ -55,11 +58,17 @@ Skeleton::Skeleton(const std::string& _name)
       mGravity(Eigen::Vector3d(0.0, 0.0, -9.81)),
       mTotalMass(0.0),
       mIsMobile(true),
+      mIsMassMatrixDirty_OLD(true),
       mIsMassMatrixDirty(true),
+      mIsMassInvMatrixDirty_OLD(true),
       mIsMassInvMatrixDirty(true),
+      mIsCoriolisVectorDirty_OLD(true),
       mIsCoriolisVectorDirty(true),
+      mIsGravityForceVectorDirty_OLD(true),
       mIsGravityForceVectorDirty(true),
+      mIsCombinedVectorDirty_OLD(true),
       mIsCombinedVectorDirty(true),
+      mIsExternalForceVectorDirty_OLD(true),
       mIsExternalForceVectorDirty(true),
       mIsDampingForceVectorDirty(true)
 {
@@ -134,6 +143,19 @@ void Skeleton::init(double _timeStep, const Eigen::Vector3d& _gravity)
     setTimeStep(_timeStep);
     setGravity(_gravity);
 
+    // Rearrange the list of body nodes with BFS (Breadth First Search)
+    std::queue<BodyNode*> queue;
+    queue.push(mBodyNodes[0]);
+    mBodyNodes.clear();
+    while (!queue.empty())
+    {
+        BodyNode* itBodyNode = queue.front();
+        queue.pop();
+        mBodyNodes.push_back(itBodyNode);
+        for (int i = 0; i < itBodyNode->getNumChildBodyNodes(); ++i)
+            queue.push(itBodyNode->getChildBodyNode(i));
+    }
+
     // Initialize body nodes and generalized coordinates
     mGenCoords.clear();
     for(int i = 0; i < getNumBodyNodes(); ++i)
@@ -157,12 +179,18 @@ void Skeleton::init(double _timeStep, const Eigen::Vector3d& _gravity)
 
     // Set dimension of dynamics quantities
     int dof = getNumGenCoords();
+    mM_OLD = Eigen::MatrixXd::Zero(dof, dof);
     mM    = Eigen::MatrixXd::Zero(dof, dof);
+    mMInv_OLD = Eigen::MatrixXd::Zero(dof, dof);
     mMInv = Eigen::MatrixXd::Zero(dof, dof);
+    mCvec_OLD = Eigen::VectorXd::Zero(dof);
     mCvec = Eigen::VectorXd::Zero(dof);
+    mG_OLD = Eigen::VectorXd::Zero(dof);
     mG    = Eigen::VectorXd::Zero(dof);
+    mCg_OLD = Eigen::VectorXd::Zero(dof);
     mCg   = Eigen::VectorXd::Zero(dof);
     set_tau(Eigen::VectorXd::Zero(dof));
+    mFext_OLD = Eigen::VectorXd::Zero(dof);
     mFext = Eigen::VectorXd::Zero(dof);
     mFc   = Eigen::VectorXd::Zero(dof);
     mFd   = Eigen::VectorXd::Zero(dof);
@@ -297,6 +325,14 @@ void Skeleton::setConfig(const Eigen::VectorXd& _config)
     mIsCombinedVectorDirty = true;
     mIsExternalForceVectorDirty = true;
     //mIsDampingForceVectorDirty = true;
+
+    mIsMassMatrixDirty_OLD = true;
+    mIsMassInvMatrixDirty_OLD = true;
+    mIsCoriolisVectorDirty_OLD = true;
+    mIsGravityForceVectorDirty_OLD = true;
+    mIsCombinedVectorDirty_OLD = true;
+    mIsExternalForceVectorDirty_OLD = true;
+//    mIsDampingForceVectorDirty_OLD = true;
 }
 
 void Skeleton::setState(const Eigen::VectorXd& _state)
@@ -325,6 +361,14 @@ void Skeleton::setState(const Eigen::VectorXd& _state)
     mIsCombinedVectorDirty = true;
     mIsExternalForceVectorDirty = true;
     mIsDampingForceVectorDirty = true;
+
+    mIsMassMatrixDirty_OLD = true;
+    mIsMassInvMatrixDirty_OLD = true;
+    mIsCoriolisVectorDirty_OLD = true;
+    mIsGravityForceVectorDirty_OLD = true;
+    mIsCombinedVectorDirty_OLD = true;
+    mIsExternalForceVectorDirty_OLD = true;
+    //mIsDampingForceVectorDirty_OLD = true;
 }
 
 Eigen::VectorXd Skeleton::getState()
@@ -334,20 +378,75 @@ Eigen::VectorXd Skeleton::getState()
     return state;
 }
 
+/// Returns true if the two matrices are equal within the given bound
+template <class MATRIX>
+bool equals (const Eigen::DenseBase<MATRIX>& A, const Eigen::DenseBase<MATRIX>& B, double tol = 1e-5) {
+
+    // Get the matrix sizes and sanity check the call
+    const size_t n1 = A.cols(), m1 = A.rows();
+    const size_t n2 = B.cols(), m2 = B.rows();
+    if(m1!=m2 || n1!=n2) return false;
+
+    // Check each index
+    for(size_t i=0; i<m1; i++) {
+        for(size_t j=0; j<n1; j++) {
+            if(boost::math::isnan(A(i,j)) ^ boost::math::isnan(B(i,j)))
+                return false;
+            else if(fabs(A(i,j) - B(i,j)) > tol)
+                return false;
+        }
+    }
+
+    // If no problems, the two matrices are equal
+    return true;
+}
+
+const Eigen::MatrixXd& Skeleton::getMassMatrix_OLD()
+{
+    if (mIsMassMatrixDirty_OLD)
+        _updateMassMatrix_OLD();
+
+    return mM_OLD;
+}
+
 const Eigen::MatrixXd& Skeleton::getMassMatrix()
 {
     if (mIsMassMatrixDirty)
         _updateMassMatrix();
 
+    Eigen::MatrixXd M = getMassMatrix_OLD();
+
+    assert(equals(mM, M));
+
     return mM;
+}
+
+const Eigen::MatrixXd& Skeleton::getInvMassMatrix_OLD()
+{
+    if (mIsMassInvMatrixDirty_OLD)
+        _updateInvMassMatrix_OLD();
+
+    return mMInv_OLD;
 }
 
 const Eigen::MatrixXd& Skeleton::getInvMassMatrix()
 {
     if (mIsMassInvMatrixDirty)
-        _updateMassInvMatrix();
+        _updateInvMassMatrix();
+
+    Eigen::MatrixXd MInv = getInvMassMatrix_OLD();
+
+    //assert(equals(mMInv, MInv));
 
     return mMInv;
+}
+
+const Eigen::VectorXd& Skeleton::getCoriolisForceVector_OLD()
+{
+    if (mIsCoriolisVectorDirty_OLD)
+        _updateCoriolisForceVector_OLD();
+
+    return mCvec_OLD;
 }
 
 const Eigen::VectorXd& Skeleton::getCoriolisForceVector()
@@ -358,6 +457,14 @@ const Eigen::VectorXd& Skeleton::getCoriolisForceVector()
     return mCvec;
 }
 
+const Eigen::VectorXd& Skeleton::getGravityForceVector_OLD()
+{
+    if (mIsGravityForceVectorDirty_OLD)
+        _updateGravityForceVector_OLD();
+
+    return mG_OLD;
+}
+
 const Eigen::VectorXd& Skeleton::getGravityForceVector()
 {
     if (mIsGravityForceVectorDirty)
@@ -366,12 +473,28 @@ const Eigen::VectorXd& Skeleton::getGravityForceVector()
     return mG;
 }
 
+const Eigen::VectorXd& Skeleton::getCombinedVector_OLD()
+{
+    if (mIsCombinedVectorDirty_OLD)
+        _updateCombinedVector_OLD();
+
+    return mCg_OLD;
+}
+
 const Eigen::VectorXd& Skeleton::getCombinedVector()
 {
     if (mIsCombinedVectorDirty)
         _updateCombinedVector();
 
     return mCg;
+}
+
+const Eigen::VectorXd& Skeleton::getExternalForceVector_OLD()
+{
+    if (mIsExternalForceVectorDirty_OLD)
+        _updateExternalForceVector_OLD();
+
+    return mFext_OLD;
 }
 
 const Eigen::VectorXd& Skeleton::getExternalForceVector()
@@ -414,6 +537,22 @@ void Skeleton::drawMarkers(renderer::RenderInterface* _ri,
     getRootBodyNode()->drawMarkers(_ri, _color, _useDefaultColor);
 }
 
+void Skeleton::_updateMassMatrix_OLD()
+{
+    assert(mM_OLD.cols() == getNumGenCoords() && mM_OLD.rows() == getNumGenCoords());
+    assert(getNumGenCoords() > 0);
+
+    // Calcualtion mass matrix, M
+    mM_OLD.setZero();
+    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
+         it != mBodyNodes.end(); ++it)
+    {
+        (*it)->aggregateMassMatrix_OLD(mM_OLD);
+    }
+
+    mIsMassMatrixDirty_OLD = false;
+}
+
 void Skeleton::_updateMassMatrix()
 {
     assert(mM.cols() == getNumGenCoords() && mM.rows() == getNumGenCoords());
@@ -421,30 +560,87 @@ void Skeleton::_updateMassMatrix()
 
     // Calcualtion mass matrix, M
     mM.setZero();
-    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
-         it != mBodyNodes.end(); ++it)
+    for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
+         it != mBodyNodes.rend(); ++it)
     {
         (*it)->aggregateMassMatrix(mM);
+        //(*it)->aggregateMassMatrix_OLD(mM);
     }
 
     mIsMassMatrixDirty = false;
 }
 
-void Skeleton::_updateMassInvMatrix()
+void Skeleton::_updateInvMassMatrix_OLD()
+{
+    assert(mMInv_OLD.cols() == getNumGenCoords() &&
+           mMInv_OLD.rows() == getNumGenCoords());
+    assert(getNumGenCoords() > 0);
+
+    // Update mass matrix
+    if (mIsMassMatrixDirty_OLD)
+        _updateMassMatrix_OLD();
+
+    // Inverse of mass matrix
+    int n = getNumGenCoords();
+    mMInv_OLD = mM_OLD.ldlt().solve(Eigen::MatrixXd::Identity(n,n));
+
+    mIsMassInvMatrixDirty_OLD = false;
+}
+
+void Skeleton::_updateInvMassMatrix()
 {
     assert(mMInv.cols() == getNumGenCoords() &&
            mMInv.rows() == getNumGenCoords());
     assert(getNumGenCoords() > 0);
 
-    // Update mass matrix
-    if (mIsMassMatrixDirty)
-        _updateMassMatrix();
+    // Prepare cache data
+    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
+         it != mBodyNodes.end(); ++it)
+    {
+        (*it)->update_O_P_Z();
+    }
 
     // Inverse of mass matrix
-    int n = getNumGenCoords();
-    mMInv = mM.ldlt().solve(Eigen::MatrixXd::Identity(n,n));
+    mMInv.setZero();
+    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
+         it != mBodyNodes.end(); ++it)
+    {
+        (*it)->aggregateInvMassMatrix(mMInv);
+    }
+
+//    // Update mass matrix
+//    if (mIsMassMatrixDirty)
+//        _updateMassMatrix();
+
+//    // Inverse of mass matrix
+//    int n = getNumGenCoords();
+//    mMInv = mM.ldlt().solve(Eigen::MatrixXd::Identity(n,n));
 
     mIsMassInvMatrixDirty = false;
+}
+
+void Skeleton::_updateCoriolisForceVector_OLD()
+{
+    assert(mCvec_OLD.size() == getNumGenCoords());
+    assert(getNumGenCoords() > 0);
+
+    // Save current tau and gravity
+    Eigen::VectorXd tau_old = get_tau();
+    Eigen::Vector3d oldGravity = getGravity();
+
+    // Set ddq as zero and gravity as zero
+    set_ddq(Eigen::VectorXd::Zero(getNumGenCoords()));
+    setGravity(Eigen::Vector3d::Zero());
+
+    // M(q) * ddq + b(q,dq) = tau
+    computeInverseDynamicsLinear(true);
+    mCvec_OLD = get_tau();
+
+    // Restore the torque
+    set_tau(tau_old);
+    setGravity(oldGravity);
+
+    mIsCoriolisVectorDirty_OLD = false;
 }
 
 void Skeleton::_updateCoriolisForceVector()
@@ -471,12 +667,41 @@ void Skeleton::_updateCoriolisForceVector()
     mIsCoriolisVectorDirty = false;
 }
 
+void Skeleton::_updateGravityForceVector_OLD()
+{
+    assert(mG_OLD.size() == getNumGenCoords());
+    assert(getNumGenCoords() > 0);
+
+    mIsGravityForceVectorDirty_OLD = false;
+}
+
 void Skeleton::_updateGravityForceVector()
 {
     assert(mG.size() == getNumGenCoords());
     assert(getNumGenCoords() > 0);
 
     mIsGravityForceVectorDirty = false;
+}
+
+void Skeleton::_updateCombinedVector_OLD()
+{
+    assert(mCg_OLD.size() == getNumGenCoords());
+    assert(getNumGenCoords() > 0);
+
+    // Save current tau
+    Eigen::VectorXd tau_old = get_tau();
+
+    // Set ddq as zero
+    set_ddq(Eigen::VectorXd::Zero(getNumGenCoords()));
+
+    // M(q) * ddq + b(q,dq) = tau
+    computeInverseDynamicsLinear(true);
+    mCg_OLD = get_tau();
+
+    // Restore the torque
+    set_tau(tau_old);
+
+    mIsCombinedVectorDirty_OLD = false;
 }
 
 void Skeleton::_updateCombinedVector()
@@ -498,6 +723,22 @@ void Skeleton::_updateCombinedVector()
     set_tau(tau_old);
 
     mIsCombinedVectorDirty = false;
+}
+
+void Skeleton::_updateExternalForceVector_OLD()
+{
+    assert(mFext_OLD.size() == getNumGenCoords());
+    assert(getNumGenCoords() > 0);
+
+    // Clear external force.
+    mFext_OLD.setZero();
+
+    // Recursive
+    for (std::vector<BodyNode*>::iterator itr = mBodyNodes.begin();
+         itr != mBodyNodes.end(); ++itr)
+        (*itr)->aggregateExternalForces(mFext_OLD);
+
+    mIsExternalForceVectorDirty_OLD = false;
 }
 
 void Skeleton::_updateExternalForceVector()
@@ -546,14 +787,14 @@ void Skeleton::computeInverseDynamicsLinear(bool _computeJacobian,
         return;
 
     // Forward recursion
-    for (std::vector<dynamics::BodyNode*>::iterator it
+    for (std::vector<BodyNode*>::iterator it
          = mBodyNodes.begin(); it != mBodyNodes.end(); ++it)
     {
         (*it)->updateAcceleration();
     }
 
     // Backward recursion
-    for (std::vector<dynamics::BodyNode*>::reverse_iterator it
+    for (std::vector<BodyNode*>::reverse_iterator it
          = mBodyNodes.rbegin(); it != mBodyNodes.rend(); ++it)
     {
         (*it)->updateBodyForce(mGravity, _withExternalForces);
@@ -593,14 +834,14 @@ void Skeleton::computeForwardDynamicsFS()
         return;
 
     // Backward recursion
-    for (std::vector<dynamics::BodyNode*>::reverse_iterator it
-         = mBodyNodes.rbegin(); it != mBodyNodes.rend(); ++it)
+    for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
+         it != mBodyNodes.rend(); ++it)
     {
         (*it)->updateBiasForce(mGravity);
     }
 
     // Forward recursion
-    for (std::vector<dynamics::BodyNode*>::iterator it = mBodyNodes.begin();
+    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
          it != mBodyNodes.end(); ++it)
     {
         (*it)->update_ddq();

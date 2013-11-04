@@ -112,7 +112,7 @@ public:
     const Eigen::Vector3d& getGravity() const;
 
     /// @brief Get total mass of the skeleton. The total mass is calculated at
-    /// init().
+    ///        init().
     double getMass() const;
 
     //--------------------------------------------------------------------------
@@ -175,22 +175,28 @@ public:
     Eigen::VectorXd getState();
 
     /// @brief Get mass matrix of the skeleton.
+    const Eigen::MatrixXd& getMassMatrix_OLD();
     const Eigen::MatrixXd& getMassMatrix();
 
     /// @brief Get inverse of mass matrix of the skeleton.
+    const Eigen::MatrixXd& getInvMassMatrix_OLD();
     const Eigen::MatrixXd& getInvMassMatrix();
 
     /// @brief Get Coriolis force vector of the skeleton.
+    const Eigen::VectorXd& getCoriolisForceVector_OLD();
     const Eigen::VectorXd& getCoriolisForceVector();
 
     /// @brief Get gravity force vector of the skeleton.
+    const Eigen::VectorXd& getGravityForceVector_OLD();
     const Eigen::VectorXd& getGravityForceVector();
 
     /// @brief Get combined vector of Coriolis force and gravity force of the
     ///        skeleton.
+    const Eigen::VectorXd& getCombinedVector_OLD();
     const Eigen::VectorXd& getCombinedVector();
 
     /// @brief Get external force vector of the skeleton.
+    const Eigen::VectorXd& getExternalForceVector_OLD();
     const Eigen::VectorXd& getExternalForceVector();
 
     /// @brief Get internal force vector of the skeleton.
@@ -288,40 +294,52 @@ protected:
     double mTotalMass;
 
     /// @brief Mass matrix for the skeleton.
+    Eigen::MatrixXd mM_OLD;
     Eigen::MatrixXd mM;
 
     /// @brief Dirty flag for the mass matrix.
+    bool mIsMassMatrixDirty_OLD;
     bool mIsMassMatrixDirty;
 
     /// @brief Inverse of mass matrix for the skeleton.
+    Eigen::MatrixXd mMInv_OLD;
     Eigen::MatrixXd mMInv;
 
     /// @brief Dirty flag for the inverse of mass matrix.
+    bool mIsMassInvMatrixDirty_OLD;
     bool mIsMassInvMatrixDirty;
 
     /// @brief Coriolis vector for the skeleton which is C(q,dq)*dq.
+    Eigen::VectorXd mCvec_OLD;
     Eigen::VectorXd mCvec;
 
     /// @brief Dirty flag for the Coriolis force vector.
+    bool mIsCoriolisVectorDirty_OLD;
     bool mIsCoriolisVectorDirty;
 
     /// @brief Gravity vector for the skeleton; computed in nonrecursive
     ///        dynamics only.
+    Eigen::VectorXd mG_OLD;
     Eigen::VectorXd mG;
 
     /// @brief Dirty flag for the gravity force vector.
+    bool mIsGravityForceVectorDirty_OLD;
     bool mIsGravityForceVectorDirty;
 
     /// @brief Combined coriolis and gravity vector which is C(q, dq)*dq + g(q).
+    Eigen::VectorXd mCg_OLD;
     Eigen::VectorXd mCg;
 
     /// @brief Dirty flag for the combined vector of Coriolis and gravity.
+    bool mIsCombinedVectorDirty_OLD;
     bool mIsCombinedVectorDirty;
 
     /// @brief External force vector for the skeleton.
+    Eigen::VectorXd mFext_OLD;
     Eigen::VectorXd mFext;
 
     /// @brief Dirty flag for the external force vector.
+    bool mIsExternalForceVectorDirty_OLD;
     bool mIsExternalForceVectorDirty;
 
     /// @brief Constraint force vector.
@@ -335,21 +353,27 @@ protected:
 
 private:
     /// @brief Update mass matrix of the skeleton.
+    void _updateMassMatrix_OLD();
     void _updateMassMatrix();
 
     /// @brief Update inverse of mass matrix of the skeleton.
-    void _updateMassInvMatrix();
+    void _updateInvMassMatrix_OLD();
+    void _updateInvMassMatrix();
 
     /// @brief Update Coriolis force vector of the skeleton.
+    void _updateCoriolisForceVector_OLD();
     void _updateCoriolisForceVector();
 
     /// @brief Update gravity force vector of the skeleton.
+    void _updateGravityForceVector_OLD();
     void _updateGravityForceVector();
 
     /// @brief Update combined vector of the skeletong.
+    void _updateCombinedVector_OLD();
     void _updateCombinedVector();
 
     /// @brief update external force vector to generalized torques.
+    void _updateExternalForceVector_OLD();
     void _updateExternalForceVector();
 
     /// @brief Update damping force vector.

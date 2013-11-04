@@ -782,6 +782,18 @@ Eigen::Vector6d AdInvRLinear(const Eigen::Isometry3d& T,
     return res;
 }
 
+Eigen::Matrix6d AdT(const Eigen::Isometry3d& _T)
+{
+    Eigen::Matrix6d res = Eigen::Matrix6d::Zero();
+
+    res.topLeftCorner<3,3>()     = _T.linear();
+    res.bottomRightCorner<3,3>() = _T.linear();
+    res.bottomLeftCorner<3,3>()  = makeSkewSymmetric(_T.translation()) *
+                                   _T.linear();
+
+    return res;
+}
+
 Eigen::Vector6d ad(const Eigen::Vector6d& s1, const Eigen::Vector6d& s2)
 {
     //--------------------------------------------------------------------------
@@ -853,6 +865,18 @@ Eigen::Vector6d dAdInvR(const Eigen::Isometry3d& T, const Eigen::Vector6d& t)
 
 //    return ret;
 //}
+
+Eigen::Matrix6d dAdT(const Eigen::Isometry3d& _T)
+{
+    Eigen::Matrix6d res = Eigen::Matrix6d::Zero();
+
+    res.topLeftCorner<3,3>()     = _T.linear().transpose();
+    res.bottomRightCorner<3,3>() = res.topLeftCorner<3,3>();
+    res.topRightCorner<3,3>()     = res.topLeftCorner<3,3>() *
+                                   makeSkewSymmetric(-_T.translation());
+
+    return res;
+}
 
 // Reference: http://www.geometrictools.com/LibMathematics/Algebra/Wm5Matrix3.inl
 Eigen::Matrix3d eulerXYXToMatrix(const Eigen::Vector3d& angle)
