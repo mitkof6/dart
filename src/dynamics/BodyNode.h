@@ -73,6 +73,8 @@ Runge-Kutta and fourth-order Runge Kutta.
 #ifndef DART_DYNAMICS_BODYNODE_H
 #define DART_DYNAMICS_BODYNODE_H
 
+#include <map>
+
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
 
@@ -562,9 +564,9 @@ protected:
     Eigen::Vector6d mBeta;
 
     math::Inertia mIt;
-    math::Inertia mA;
+    std::map<int, math::Inertia> mA;
     math::Jacobian mO;
-    Eigen::MatrixXd mP;
+    math::Inertia mP;
     math::Inertia mY;
     math::Jacobian mZ;
     Eigen::Vector6d mW2;

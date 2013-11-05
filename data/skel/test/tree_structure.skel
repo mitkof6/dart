@@ -152,7 +152,7 @@
             </body>
             <body name="link 7">
                 <gravity>1</gravity>
-                <transformation>0.3 0 0 0 0 0</transformation>
+                <transformation>0.7 0 0 0 0 0</transformation>
                 <inertia>
                     <mass>5</mass>
                     <offset>0 0 0</offset>

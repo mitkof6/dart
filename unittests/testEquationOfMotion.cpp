@@ -78,7 +78,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
     myWorld->setTimeStep(0.001);
 
 
-    double simTime = 0.002;
+    double simTime = 0.001;
     double timeStep = myWorld->getTimeStep();
     int nSteps = simTime / timeStep;
 
@@ -107,6 +107,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             {
                 std::cout << "MInv_OLD: \n" << MInv_OLD << std::endl;
                 std::cout << "MInv    : \n" << MInv << std::endl;
+                std::cout << "Diff    : \n" << MInv - MInv_OLD << std::endl;
             }
             EXPECT_TRUE(equals(MInv_OLD, MInv));
 
@@ -187,17 +188,17 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
 //}
 
 /******************************************************************************/
-TEST_F(EOM, TREE_STRUCTURE)
-{
-    equationsOfMotionTest(
-                DART_DATA_PATH"/skel/test/tree_structure.skel");
-}
+//TEST_F(EOM, TREE_STRUCTURE)
+//{
+//    equationsOfMotionTest(
+//                DART_DATA_PATH"/skel/test/tree_structure.skel");
+//}
 
 /******************************************************************************/
-//TEST_F(EOM, FULL_BODY)
-//{
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
-//}
+TEST_F(EOM, FULL_BODY)
+{
+    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
+}
 
 /******************************************************************************/
 int main(int argc, char* argv[])
