@@ -230,5 +230,16 @@ inline void EulerJoint::updateJacobianTimeDeriv()
     mdS.col(2) = math::AdT(mT_ChildBodyToJoint, dJ2);
 }
 
+void EulerJoint::clampRotation()
+{
+    for (int i = 0; i < 3; i++)
+    {
+        if( mCoordinate[i].get_q() > M_PI )
+            mCoordinate[i].set_q(mCoordinate[i].get_q() - 2*M_PI);
+        if( mCoordinate[i].get_q() < -M_PI )
+            mCoordinate[i].set_q(mCoordinate[i].get_q() + 2*M_PI);
+    }
+}
+
 } // namespace dynamics
 } // namespace dart

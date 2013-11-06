@@ -94,8 +94,8 @@ void JOINTS::kinematicsTest(Joint* _joint)
 
         for (int i = 0; i < dof; ++i)
         {
-            q(i) = random(-DART_PI, DART_PI);
-            dq(i) = random(-DART_PI, DART_PI);
+            q(i) = random(-DART_PI*2.0, DART_PI*2.0);
+            dq(i) = random(-DART_PI*2.0, DART_PI*2.0);
         }
 
         Eigen::VectorXd state = Eigen::VectorXd::Zero(2*dof);

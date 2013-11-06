@@ -886,9 +886,13 @@ void BodyNode::updateArticulatedInertia(double _timeStep)
         Eigen::MatrixXd K = Eigen::MatrixXd::Zero(dof, dof);
         for (int i = 0; i < dof; ++i)
             K(i, i) = mParentJoint->getDampingCoefficient(i);
+//        mPsiK = (mParentJoint->getLocalJacobian().transpose() * mAI_S +
+//                 _timeStep * K).inverse();
         mPsiK = (mParentJoint->getLocalJacobian().transpose() * mAI_S +
-                 _timeStep * K).inverse();
-        mPsi = (mParentJoint->getLocalJacobian().transpose() * mAI_S).inverse();
+                 _timeStep * K).ldlt().solve(Eigen::MatrixXd::Identity(dof, dof));
+//        mPsi = (mParentJoint->getLocalJacobian().transpose() * mAI_S).inverse();
+        mPsi = (mParentJoint->getLocalJacobian().transpose() * mAI_S
+                ).ldlt().solve(Eigen::MatrixXd::Identity(dof, dof));
     }
     assert(!math::isNan(mPsiK));
     assert(!math::isNan(mPsi));

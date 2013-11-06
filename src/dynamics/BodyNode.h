@@ -544,8 +544,10 @@ protected:
     /// @brief
     Eigen::Vector6d mFgravity;
 
+public:
     /// @brief Articulated inertia
     math::Inertia mAI;
+protected:
 
     /// @brief Bias force
     Eigen::Vector6d mB;
@@ -553,8 +555,10 @@ protected:
     /// @brief
     math::Jacobian mAI_S;
 
+public:
     /// @brief
     Eigen::MatrixXd mPsi;
+protected:
 
     /// @brief
     Eigen::MatrixXd mPsiK;

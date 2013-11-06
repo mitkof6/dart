@@ -39,6 +39,7 @@
 #include <gtest/gtest.h>
 #include "TestHelpers.h"
 
+#include "common/Console.h"
 #include "math/Geometry.h"
 #include "math/Helpers.h"
 #include "dynamics/BallJoint.h"
@@ -72,7 +73,15 @@ public:
 void EOM::equationsOfMotionTest(const std::string& _fileName)
 {
     bool isRandomControlInput = true;
+    double lowerControlInput = -0.001;
+    double upperControlInput = 0.001;
+
     bool isRandomExternalForce = true;
+    double lowerExternalForce = -0.001;
+    double upperExternalForce = 0.001;
+
+    bool isJointDamping = true;
+    double dampingCoeff = 0.001;
 
     simulation::World* myWorld = utils::SkelParser::readSkelFile(_fileName);
     EXPECT_TRUE(myWorld != NULL);
@@ -80,11 +89,27 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
     myWorld->setGravity(Eigen::Vector3d(0.0, 0.0, -9.81));
     myWorld->setTimeStep(0.001);
 
-    double simTime = 0.100;
+    double simTime = 1.000;
     double timeStep = myWorld->getTimeStep();
     int nSteps = simTime / timeStep;
 
-    // Zero control test
+    if (isJointDamping)
+    {
+        for (int i = 0; i < myWorld->getNumSkeletons(); ++i)
+        {
+            dynamics::Skeleton* skeleton = myWorld->getSkeleton(i);
+            for (int j = 0; j < skeleton->getNumBodyNodes(); ++j)
+            {
+                dynamics::BodyNode* bodyNode = skeleton->getBodyNode(j);
+                dynamics::Joint* joint = bodyNode->getParentJoint();
+
+                for (int k = 0; k < joint->getNumGenCoords(); ++k)
+                    joint->setDampingCoefficient(dampingCoeff, k);
+            }
+        }
+    }
+
+    //
     for (int i = 0; i < nSteps; i++)
     {
         myWorld->step();
@@ -92,6 +117,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
         for (int j = 0; j < myWorld->getNumSkeletons(); ++j)
         {
             dynamics::Skeleton* skeleton = myWorld->getSkeleton(j);
+            int n = skeleton->getNumGenCoords();
 
             // Mass matrix
             Eigen::MatrixXd M_OLD = skeleton->getMassMatrix_OLD();
@@ -104,15 +130,40 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             EXPECT_TRUE(equals(M_OLD, M));
 
             // Inverse mass matrix
-//            Eigen::MatrixXd MInv_OLD = skeleton->getInvMassMatrix_OLD();
-//            Eigen::MatrixXd MInv     = skeleton->getInvMassMatrix();
-//            if (!equals(MInv_OLD, MInv))
-//            {
-//                std::cout << "MInv_OLD: \n" << MInv_OLD << std::endl;
-//                std::cout << "MInv    : \n" << MInv << std::endl;
-//                std::cout << "Diff    : \n" << MInv - MInv_OLD << std::endl;
-//            }
-//            EXPECT_TRUE(equals(MInv_OLD, MInv));
+            Eigen::MatrixXd MInv_OLD       = skeleton->getInvMassMatrix_OLD();
+            Eigen::MatrixXd MInv           = skeleton->getInvMassMatrix();
+            if (!equals2(MInv_OLD, MInv))
+            {
+                std::cout << "M_OLD: \n" << M_OLD << std::endl;
+                std::cout << "M    : \n" << M << std::endl;
+                std::cout << "MInv_OLD: \n" << MInv_OLD << std::endl;
+                std::cout << "MInv    : \n" << MInv << std::endl;
+                std::cout << "Diff    : \n" << MInv - MInv_OLD << std::endl;
+                std::cout << "Psi     : \n" << skeleton->getBodyNode(0)->mPsi << std::endl;
+                std::cout << "AI      : \n" << skeleton->getBodyNode(0)->mAI << std::endl;
+                std::cout << "S       : \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
+                std::cout << "S^T AI S: \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
+                std::cout << "(S^T AI S)^{-1}: \n" << (skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian()).inverse() << std::endl;
+            }
+            EXPECT_TRUE(equals2(MInv_OLD, MInv));
+
+//            Eigen::MatrixXd I              = Eigen::MatrixXd::Identity(n,n);
+//            Eigen::MatrixXd M_MInv         = MInv * M;
+//            Eigen::MatrixXd MInv_M         = M * MInv;
+//            Eigen::MatrixXd MInv_M_OLD     = MInv * M_OLD;
+//            Eigen::MatrixXd M_OLD_MInv     = M_OLD * MInv;
+//            Eigen::MatrixXd MInv_OLD_M     = MInv_OLD * M;
+//            Eigen::MatrixXd M_MInv_OLD     = M * MInv_OLD;
+//            Eigen::MatrixXd MInv_OLD_M_OLD = MInv_OLD * M_OLD;
+//            Eigen::MatrixXd M_OLD_MInv_OLD = M_OLD* MInv_OLD;
+//            EXPECT_TRUE(equals(M_MInv, I));
+//            EXPECT_TRUE(equals(MInv_M, I));
+//            EXPECT_TRUE(equals(MInv_M_OLD, I));
+//            EXPECT_TRUE(equals(M_OLD_MInv, I));
+//            EXPECT_TRUE(equals(MInv_OLD_M, I));
+//            EXPECT_TRUE(equals(M_MInv_OLD, I));
+//            EXPECT_TRUE(equals(MInv_OLD_M_OLD, I));
+//            EXPECT_TRUE(equals(M_OLD_MInv_OLD, I));
 
             // Coriolis and gravity force vector
             Eigen::VectorXd Cg_OLD = skeleton->getCombinedVector_OLD();
@@ -148,7 +199,8 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             if (isRandomControlInput)
             {
                 Eigen::VectorXd Fint = skeleton->getInternalForceVector();
-                Fint += Eigen::VectorXd::Random(skeleton->getNumGenCoords());
+                for (int k = 0; k < Fint.size(); ++k)
+                    Fint[k] += math::random(lowerControlInput, upperControlInput);
                 skeleton->setInternalForceVector(Fint);
             }
 
@@ -157,8 +209,13 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             {
                 for (int k = 0; k < skeleton->getNumBodyNodes(); ++k)
                 {
-                    skeleton->getBodyNode(k)->setExtForce(Eigen::Vector3d::Random());
-                    skeleton->getBodyNode(k)->setExtTorque(Eigen::Vector3d::Random());
+                    Eigen::Vector3d force;
+                    Eigen::Vector3d torque;
+                    for (int l = 0; l < 3; ++l)
+                    {
+                        force[l] = math::random(lowerExternalForce, upperExternalForce);
+                        torque[l] = math::random(lowerExternalForce, upperExternalForce);
+                    }
                 }
             }
 
@@ -175,19 +232,21 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
     }
 
     // Random state test
-    int nRandomTest = 100;
+    int nRandomTest = 1000;
     for (int i = 0; i < nRandomTest; i++)
     {
         for (int j = 0; j < myWorld->getNumSkeletons(); ++j)
         {
             dynamics::Skeleton* skeleton = myWorld->getSkeleton(j);
+            int n = skeleton->getNumGenCoords();
 
             // Random state
             Eigen::VectorXd state = skeleton->getState();
             for (int j = 0; j < state.size(); ++j)
             {
-                //state[j] = math::random(-DART_PI*2.0, DART_PI*2.0);
-                state[j] = math::random(-DART_PI*0.499, DART_PI*0.499);
+//                state[j] = math::random(-DART_PI*2.0, DART_PI*2.0);
+                state[j] = math::random(-DART_PI*0.40, DART_PI*0.40);
+//                state[j] = DART_PI*0.5;
             }
             skeleton->setState(state);
 
@@ -202,17 +261,40 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             EXPECT_TRUE(equals(M_OLD, M));
 
             // Inverse mass matrix
-//            Eigen::MatrixXd MInv_OLD = skeleton->getInvMassMatrix_OLD();
-//            Eigen::MatrixXd MInv     = skeleton->getInvMassMatrix();
-//            if (!equals(MInv_OLD, MInv))
-//            {
-//                std::cout << "MInv_OLD: \n" << MInv_OLD << std::endl;
-//                std::cout << "MInv    : \n" << MInv << std::endl;
-//                std::cout << "Diff    : \n" << MInv - MInv_OLD << std::endl;
-////                std::cout << "q       : \n" << state.head(state.size()/2)/DART_PI << std::endl;
-////                std::cout << "dq      : \n" << state.tail(state.size()/2)/DART_PI << std::endl;
-//            }
-//            EXPECT_TRUE(equals(MInv_OLD, MInv));
+            Eigen::MatrixXd MInv_OLD       = skeleton->getInvMassMatrix_OLD();
+            Eigen::MatrixXd MInv           = skeleton->getInvMassMatrix();
+            if (!equals2(MInv_OLD, MInv))
+            {
+                std::cout << "M_OLD: \n" << M_OLD << std::endl;
+                std::cout << "M    : \n" << M << std::endl;
+                std::cout << "MInv_OLD: \n" << MInv_OLD << std::endl;
+                std::cout << "MInv    : \n" << MInv << std::endl;
+                std::cout << "Diff    : \n" << MInv - MInv_OLD << std::endl;
+                std::cout << "Psi     : \n" << skeleton->getBodyNode(0)->mPsi << std::endl;
+                std::cout << "AI      : \n" << skeleton->getBodyNode(0)->mAI << std::endl;
+                std::cout << "S       : \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
+                std::cout << "S^T AI S: \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
+                std::cout << "(S^T AI S)^{-1}: \n" << (skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian()).inverse() << std::endl;
+            }
+            EXPECT_TRUE(equals2(MInv_OLD, MInv));
+
+//            Eigen::MatrixXd I              = Eigen::MatrixXd::Identity(n,n);
+//            Eigen::MatrixXd M_MInv         = MInv * M;
+//            Eigen::MatrixXd MInv_M         = M * MInv;
+//            Eigen::MatrixXd MInv_M_OLD     = MInv * M_OLD;
+//            Eigen::MatrixXd M_OLD_MInv     = M_OLD * MInv;
+//            Eigen::MatrixXd MInv_OLD_M     = MInv_OLD * M;
+//            Eigen::MatrixXd M_MInv_OLD     = M * MInv_OLD;
+//            Eigen::MatrixXd MInv_OLD_M_OLD = MInv_OLD * M_OLD;
+//            Eigen::MatrixXd M_OLD_MInv_OLD = M_OLD* MInv_OLD;
+//            EXPECT_TRUE(equals(M_MInv, I));
+//            EXPECT_TRUE(equals(MInv_M, I));
+//            EXPECT_TRUE(equals(MInv_M_OLD, I));
+//            EXPECT_TRUE(equals(M_OLD_MInv, I));
+//            EXPECT_TRUE(equals(MInv_OLD_M, I));
+//            EXPECT_TRUE(equals(M_MInv_OLD, I));
+//            EXPECT_TRUE(equals(MInv_OLD_M_OLD, I));
+//            EXPECT_TRUE(equals(M_OLD_MInv_OLD, I));
 
             // Coriolis and gravity force vector
             Eigen::VectorXd Cg_OLD = skeleton->getCombinedVector_OLD();
@@ -248,7 +330,8 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             if (isRandomControlInput)
             {
                 Eigen::VectorXd Fint = skeleton->getInternalForceVector();
-                Fint += Eigen::VectorXd::Random(skeleton->getNumGenCoords());
+                for (int k = 0; k < Fint.size(); ++k)
+                    Fint[k] += math::random(lowerControlInput, upperControlInput);
                 skeleton->setInternalForceVector(Fint);
             }
 
@@ -257,8 +340,13 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             {
                 for (int k = 0; k < skeleton->getNumBodyNodes(); ++k)
                 {
-                    skeleton->getBodyNode(k)->setExtForce(Eigen::Vector3d::Random());
-                    skeleton->getBodyNode(k)->setExtTorque(Eigen::Vector3d::Random());
+                    Eigen::Vector3d force;
+                    Eigen::Vector3d torque;
+                    for (int l = 0; l < 3; ++l)
+                    {
+                        force[l] = math::random(lowerExternalForce, upperExternalForce);
+                        torque[l] = math::random(lowerExternalForce, upperExternalForce);
+                    }
                 }
             }
 
@@ -276,63 +364,46 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
 }
 
 /******************************************************************************/
-TEST_F(EOM, SINGLE_PENDULUM)
+TEST_F(EOM, EquationOfMotion)
 {
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum.skel");
-}
+//    dtdbg << "single_pendulum.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum.skel");
 
-/******************************************************************************/
-TEST_F(EOM, DOUBLE_PENDULUM)
-{
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum.skel");
-}
+    dtdbg << "single_pendulum_euler_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum_euler_joint.skel");
 
-/******************************************************************************/
-TEST_F(EOM, SIMPLE_TREE_STRUCTURE)
-{
-    equationsOfMotionTest(
-                DART_DATA_PATH"/skel/test/simple_tree_structure.skel");
-}
+//    dtdbg << "single_pendulum_ball_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum_ball_joint.skel");
 
-/******************************************************************************/
-TEST_F(EOM, SIMPLE_TREE_STRUCTURE_EULER_JOINT)
-{
-    equationsOfMotionTest(
-                DART_DATA_PATH"/skel/test/simple_tree_structure_euler_joint.skel");
-}
+//    dtdbg << "double_pendulum.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum.skel");
 
-/******************************************************************************/
-TEST_F(EOM, SIMPLE_TREE_STRUCTURE_BALL_JOINT)
-{
-    equationsOfMotionTest(
-                DART_DATA_PATH"/skel/test/simple_tree_structure_ball_joint.skel");
-}
+    dtdbg << "double_pendulum_euler_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_euler_joint.skel");
 
-/******************************************************************************/
-TEST_F(EOM, TREE_STRUCTURE)
-{
-    equationsOfMotionTest(
-                DART_DATA_PATH"/skel/test/tree_structure.skel");
-}
+//    dtdbg << "double_pendulum_ball_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_ball_joint.skel");
 
-/******************************************************************************/
-TEST_F(EOM, TREE_STRUCTURE_EULER_JOINT)
-{
-    equationsOfMotionTest(
-                DART_DATA_PATH"/skel/test/tree_structure_euler_joint.skel");
-}
+//    dtdbg << "simple_tree_structure.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure.skel");
 
-/******************************************************************************/
-TEST_F(EOM, TREE_STRUCTURE_BALL_JOINT)
-{
-    equationsOfMotionTest(
-                DART_DATA_PATH"/skel/test/tree_structure_ball_joint.skel");
-}
+//    dtdbg << "simple_tree_structure_euler_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_euler_joint.skel");
 
-/******************************************************************************/
-TEST_F(EOM, FULL_BODY)
-{
-    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
+//    dtdbg << "simple_tree_structure_ball_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_ball_joint.skel");
+
+//    dtdbg << "tree_structure.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure.skel");
+
+//    dtdbg << "tree_structure_euler_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_euler_joint.skel");
+
+//    dtdbg << "tree_structure_ball_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_ball_joint.skel");
+
+//    dtdbg << "fullbody1.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
 }
 
 /******************************************************************************/
@@ -341,5 +412,3 @@ int main(int argc, char* argv[])
 	::testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
 }
-
-

@@ -348,6 +348,7 @@ void Skeleton::setState(const Eigen::VectorXd& _state)
     for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
          it != mBodyNodes.end(); ++it)
     {
+        (*it)->getParentJoint()->clampRotation();
         (*it)->updateTransform();
         (*it)->updateVelocity();
         (*it)->updateEta();
