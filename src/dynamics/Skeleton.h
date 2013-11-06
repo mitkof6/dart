@@ -200,7 +200,7 @@ public:
     const Eigen::VectorXd& getExternalForceVector();
 
     /// @brief Get internal force vector of the skeleton.
-    Eigen::VectorXd getInternalForceVector();
+    Eigen::VectorXd getInternalForceVector() const;
 
     /// @brief Get damping force of the skeleton.
     const Eigen::VectorXd& getDampingForceVector();

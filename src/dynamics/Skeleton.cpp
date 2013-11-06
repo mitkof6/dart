@@ -177,6 +177,11 @@ void Skeleton::init(double _timeStep, const Eigen::Vector3d& _gravity)
         (*it)->updateArticulatedInertia(mTimeStep);
     }
 
+//    for (int i = 0; i < mBodyNodes.size(); ++i)
+//    {
+//        std::cout << "BodyNode " << i << ":" << mBodyNodes[i]->mSkelIndex << ", " << mBodyNodes[i]->mName << std::endl;
+//    }
+
     // Set dimension of dynamics quantities
     int dof = getNumGenCoords();
     mM_OLD = Eigen::MatrixXd::Zero(dof, dof);
@@ -434,9 +439,9 @@ const Eigen::MatrixXd& Skeleton::getInvMassMatrix()
     if (mIsMassInvMatrixDirty)
         _updateInvMassMatrix();
 
-    Eigen::MatrixXd MInv = getInvMassMatrix_OLD();
+//    Eigen::MatrixXd MInv = getInvMassMatrix_OLD();
 
-    //assert(equals(mMInv, MInv));
+//    assert(equals(mMInv, MInv));
 
     return mMInv;
 }
@@ -505,7 +510,7 @@ const Eigen::VectorXd& Skeleton::getExternalForceVector()
     return mFext;
 }
 
-Eigen::VectorXd Skeleton::getInternalForceVector()
+Eigen::VectorXd Skeleton::getInternalForceVector() const
 {
     return get_tau();
 }
@@ -608,14 +613,6 @@ void Skeleton::_updateInvMassMatrix()
         (*it)->aggregateInvMassMatrix(mMInv);
     }
 
-//    // Update mass matrix
-//    if (mIsMassMatrixDirty)
-//        _updateMassMatrix();
-
-//    // Inverse of mass matrix
-//    int n = getNumGenCoords();
-//    mMInv = mM.ldlt().solve(Eigen::MatrixXd::Identity(n,n));
-
     mIsMassInvMatrixDirty = false;
 }
 
@@ -648,21 +645,12 @@ void Skeleton::_updateCoriolisForceVector()
     assert(mCvec.size() == getNumGenCoords());
     assert(getNumGenCoords() > 0);
 
-    // Save current tau and gravity
-    Eigen::VectorXd tau_old = get_tau();
-    Eigen::Vector3d oldGravity = getGravity();
-
-    // Set ddq as zero and gravity as zero
-    set_ddq(Eigen::VectorXd::Zero(getNumGenCoords()));
-    setGravity(Eigen::Vector3d::Zero());
-
-    // M(q) * ddq + b(q,dq) = tau
-    computeInverseDynamicsLinear(true);
-    mCvec = get_tau();
-
-    // Restore the torque
-    set_tau(tau_old);
-    setGravity(oldGravity);
+    mCvec.setZero();
+    for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
+         it != mBodyNodes.rend(); ++it)
+    {
+        (*it)->aggregateCoriolisForceVector(mCvec);
+    }
 
     mIsCoriolisVectorDirty = false;
 }
@@ -672,6 +660,14 @@ void Skeleton::_updateGravityForceVector_OLD()
     assert(mG_OLD.size() == getNumGenCoords());
     assert(getNumGenCoords() > 0);
 
+    // Calcualtion mass matrix, M
+    mG_OLD.setZero();
+    for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
+         it != mBodyNodes.rend(); ++it)
+    {
+        (*it)->aggregateGravityForceVector_OLD(mG_OLD, mGravity);
+    }
+
     mIsGravityForceVectorDirty_OLD = false;
 }
 
@@ -679,6 +675,14 @@ void Skeleton::_updateGravityForceVector()
 {
     assert(mG.size() == getNumGenCoords());
     assert(getNumGenCoords() > 0);
+
+    // Calcualtion mass matrix, M
+    mG.setZero();
+    for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
+         it != mBodyNodes.rend(); ++it)
+    {
+        (*it)->aggregateGravityForceVector(mG, mGravity);
+    }
 
     mIsGravityForceVectorDirty = false;
 }
@@ -709,18 +713,17 @@ void Skeleton::_updateCombinedVector()
     assert(mCg.size() == getNumGenCoords());
     assert(getNumGenCoords() > 0);
 
-    // Save current tau
-    Eigen::VectorXd tau_old = get_tau();
-
-    // Set ddq as zero
-    set_ddq(Eigen::VectorXd::Zero(getNumGenCoords()));
-
-    // M(q) * ddq + b(q,dq) = tau
-    computeInverseDynamicsLinear(true);
-    mCg = get_tau();
-
-    // Restore the torque
-    set_tau(tau_old);
+    mCg.setZero();
+    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
+         it != mBodyNodes.end(); ++it)
+    {
+        (*it)->updateW();
+    }
+    for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
+         it != mBodyNodes.rend(); ++it)
+    {
+        (*it)->aggregateCombinedVector(mCg, mGravity);
+    }
 
     mIsCombinedVectorDirty = false;
 }
@@ -732,11 +735,9 @@ void Skeleton::_updateExternalForceVector_OLD()
 
     // Clear external force.
     mFext_OLD.setZero();
-
-    // Recursive
     for (std::vector<BodyNode*>::iterator itr = mBodyNodes.begin();
          itr != mBodyNodes.end(); ++itr)
-        (*itr)->aggregateExternalForces(mFext_OLD);
+        (*itr)->aggregateExternalForces_OLD(mFext_OLD);
 
     mIsExternalForceVectorDirty_OLD = false;
 }
@@ -748,10 +749,8 @@ void Skeleton::_updateExternalForceVector()
 
     // Clear external force.
     mFext.setZero();
-
-    // Recursive
-    for (std::vector<BodyNode*>::iterator itr = mBodyNodes.begin();
-         itr != mBodyNodes.end(); ++itr)
+    for (std::vector<BodyNode*>::reverse_iterator itr = mBodyNodes.rbegin();
+         itr != mBodyNodes.rend(); ++itr)
         (*itr)->aggregateExternalForces(mFext);
 
     mIsExternalForceVectorDirty = false;
@@ -783,7 +782,7 @@ void Skeleton::computeInverseDynamicsLinear(bool _computeJacobian,
                                             bool _withDampingForces)
 {
     // Skip immobile or 0-dof skeleton
-    if (!isMobile() || getNumGenCoords() == 0)
+    if (getNumGenCoords() == 0)
         return;
 
     // Forward recursion

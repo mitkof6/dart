@@ -242,7 +242,7 @@ Eigen::Vector6d BodyNode::getWorldAcceleration(
     return math::AdT(T, mdV);
 }
 
-const math::Jacobian&BodyNode::getBodyJacobian() const
+const math::Jacobian& BodyNode::getBodyJacobian() const
 {
     return mBodyJacobian;
 }
@@ -357,42 +357,22 @@ void BodyNode::init(Skeleton* _skeleton, int _skeletonIndex)
     // Fill all the nephew and younger brothers of this body
     //--------------------------------------------------------------------------
     mNephewAndYoungerBrotherBodyNodes.clear();
-    // Add nephew of older brothers and younger brothers of this body to the
-    // queue
-    if (mParentBodyNode)
-    {
-        int i = 0;
-        int numSibling = mParentBodyNode->getNumChildBodyNodes();
-        for (; i < numSibling; ++i)
-        {
-            BodyNode* it = mParentBodyNode->getChildBodyNode(i);
-            if (it == this)
-            {
-                ++i;
-                break;
-            }
-            for (int j = 0; j < it->getNumChildBodyNodes(); ++j)
-            {
-                queue.push(it->getChildBodyNode(j));
-            }
-        }
-        for (; i < numSibling; ++i)
-        {
-            BodyNode* it = mParentBodyNode->getChildBodyNode(i);
-            queue.push(it);
-        }
-    }
-    // Add all the nephew and younger brothers of this body
-    while (!queue.empty())
-    {
-        BodyNode* it = queue.front();
-        queue.pop();
-        mNephewAndYoungerBrotherBodyNodes.push_back(it);
 
-        for (int i = 0; i < it->getNumChildBodyNodes(); ++i)
-        {
-            queue.push(it->getChildBodyNode(i));
-        }
+    bool isFoundThisBodyNode = false;
+    for (int i = 0; i < mSkeleton->getNumBodyNodes(); ++i)
+    {
+        if (isFoundThisBodyNode)
+            mNephewAndYoungerBrotherBodyNodes.push_back(mSkeleton->getBodyNode(i));
+        if (mSkeleton->getBodyNode(i) == this)
+            isFoundThisBodyNode = true;
+    }
+    for (std::vector<BodyNode*>::iterator it = mDescendantBodyNodes.begin();
+         it != mDescendantBodyNodes.end(); ++it)
+    {
+        mNephewAndYoungerBrotherBodyNodes.erase(
+                    std::remove(mNephewAndYoungerBrotherBodyNodes.begin(),
+                                mNephewAndYoungerBrotherBodyNodes.end(), *it),
+                    mNephewAndYoungerBrotherBodyNodes.end());
     }
 
     for (std::vector<BodyNode*>::iterator it1 = mDescendantBodyNodes.begin();
@@ -731,8 +711,8 @@ Joint*BodyNode::getParentJoint() const
     return mParentJoint;
 }
 
-void BodyNode::addExtForce(const Eigen::Vector3d& _offset,
-                           const Eigen::Vector3d& _force,
+void BodyNode::addExtForce(const Eigen::Vector3d& _force,
+                           const Eigen::Vector3d& _offset,
                            bool _isOffsetLocal, bool _isForceLocal)
 {
     Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
@@ -751,8 +731,8 @@ void BodyNode::addExtForce(const Eigen::Vector3d& _offset,
     mFext += math::dAdInvT(T, F);
 }
 
-void BodyNode::setExtForce(const Eigen::Vector3d& _offset,
-                           const Eigen::Vector3d& _force,
+void BodyNode::setExtForce(const Eigen::Vector3d& _force,
+                           const Eigen::Vector3d& _offset,
                            bool _isOffsetLocal, bool _isForceLocal)
 {
     Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
@@ -988,23 +968,6 @@ void BodyNode::update_F_fs()
     assert(!math::isNan(mF));
 }
 
-void BodyNode::updateZ()
-{
-    mZ.noalias() = math::dAdT(mParentJoint->getLocalTransform().inverse()) *
-                   (mAI * mParentJoint->getLocalJacobian() * mPsi);
-    assert(!math::isNan(mF));
-}
-
-void BodyNode::aggregateExternalForces(Eigen::VectorXd& _Fext)
-{
-    assert(mParentJoint != NULL);
-
-    Eigen::VectorXd localForce = mBodyJacobian.transpose() * mFext;
-
-    for(int i = 0; i < getNumDependentGenCoords(); i++)
-        _Fext(mDependentGenCoordIndices[i]) += localForce(i);
-}
-
 void BodyNode::aggregateMassMatrix_OLD(Eigen::MatrixXd& _M)
 {
     mM.triangularView<Eigen::Upper>() = mBodyJacobian.transpose() *
@@ -1042,15 +1005,8 @@ void BodyNode::aggregateMassMatrix(Eigen::MatrixXd& _M)
     M = J.transpose() * tmpI * J;
 
     // Assigning
-    for (int i = 0; i < n; i++)
-    {
-        int iSkelIdx = mParentJoint->getGenCoord(i)->getSkeletonIndex();
-        for(int j = 0; j < n; j++)
-        {
-            int jSkelIdx = mParentJoint->getGenCoord(j)->getSkeletonIndex();
-            _M(iSkelIdx, jSkelIdx) += M(i, j);
-        }
-    }
+    int iSkelIdx = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+    _M.block(iSkelIdx, iSkelIdx, n, n) = M;
 
     childBodyNode = currBodyNode;
     currBodyNode = currBodyNode->getParentBodyNode();
@@ -1069,18 +1025,10 @@ void BodyNode::aggregateMassMatrix(Eigen::MatrixXd& _M)
         M2 = J2.transpose() * tmpI * J;
 
         // Assigning
-        for(int i = 0; i < m; i++)
-        {
-            int iSkelIdx = currBodyNode->getParentJoint()->getGenCoord(i)->getSkeletonIndex();
-
-            for(int j = 0; j < n; j++)
-            {
-                int jSkelIdx = mParentJoint->getGenCoord(j)->getSkeletonIndex();
-
-                _M(iSkelIdx, jSkelIdx) += M2(i, j);
-                _M(jSkelIdx, iSkelIdx) += M2(i, j);
-            }
-        }
+        int iSkelIdx = currBodyNode->getParentJoint()->getGenCoord(0)->getSkeletonIndex();
+        int jSkelIdx = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+        _M.block(iSkelIdx, jSkelIdx, m, n) = M2;
+        _M.block(jSkelIdx, iSkelIdx, n, m) = M2.transpose();
 
         childBodyNode = currBodyNode;
         currBodyNode = currBodyNode->getParentBodyNode();
@@ -1104,45 +1052,14 @@ void BodyNode::aggregateMassMatrix(Eigen::MatrixXd& _M)
         M2 = J2.transpose() * tmpI * J;
 
         // Assigning
-        for(int i = 0; i < m; i++)
-        {
-            int iSkelIdx = currBodyNode->getParentJoint()->getGenCoord(i)->getSkeletonIndex();
-
-            for(int j = 0; j < n; j++)
-            {
-                int jSkelIdx = mParentJoint->getGenCoord(j)->getSkeletonIndex();
-
-                _M(iSkelIdx, jSkelIdx) += M2(i, j);
-                _M(jSkelIdx, iSkelIdx) += M2(i, j);
-            }
-        }
+        int iSkelIdx = currBodyNode->getParentJoint()->getGenCoord(0)->getSkeletonIndex();
+        int jSkelIdx = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+        _M.block(iSkelIdx, jSkelIdx, m, n) = M2;
+        _M.block(jSkelIdx, iSkelIdx, n, m) = M2.transpose();
 
         childBodyNode = currBodyNode;
         currBodyNode = currBodyNode->getParentBodyNode();
     }
-}
-
-/// Returns true if the two matrices are equal within the given bound
-template <class MATRIX>
-bool equals (const Eigen::DenseBase<MATRIX>& A, const Eigen::DenseBase<MATRIX>& B, double tol = 1e-5) {
-
-    // Get the matrix sizes and sanity check the call
-    const size_t n1 = A.cols(), m1 = A.rows();
-    const size_t n2 = B.cols(), m2 = B.rows();
-    if(m1!=m2 || n1!=n2) return false;
-
-    // Check each index
-    for(size_t i=0; i<m1; i++) {
-        for(size_t j=0; j<n1; j++) {
-            if(boost::math::isnan(A(i,j)) ^ boost::math::isnan(B(i,j)))
-                return false;
-            else if(fabs(A(i,j) - B(i,j)) > tol)
-                return false;
-        }
-    }
-
-    // If no problems, the two matrices are equal
-    return true;
 }
 
 void BodyNode::update_O_P_Z()
@@ -1151,6 +1068,8 @@ void BodyNode::update_O_P_Z()
     mP = math::Inertia::Identity() - mO * mParentJoint->getLocalJacobian().transpose();
     mZ = math::dAdT(mParentJoint->getLocalTransform().inverse()) * mO;
 }
+
+//#define DEBUG_PRINT
 
 void BodyNode::aggregateInvMassMatrix(Eigen::MatrixXd& _MInv)
 {
@@ -1162,27 +1081,51 @@ void BodyNode::aggregateInvMassMatrix(Eigen::MatrixXd& _MInv)
     // MInv(i, i) =
     //   Psi(i) + Z_{\lambda(i),i}^T A_{\lambda(i),\lambda(i)} Z_{\lambda(i),i}
     Eigen::MatrixXd MInvDiagonal = mPsi;
+#ifdef DEBUG_PRINT
+    std::cout << "M'(" << mSkelIndex << ", " << mSkelIndex << ") = Psi(" << mSkelIndex << ")";
+#endif
     if (mParentBodyNode)
     {
         MInvDiagonal += mZ.transpose() *
-                mParentBodyNode->mA[mParentBodyNode->mSkelIndex] * mZ;
+                        mParentBodyNode->mA[mParentBodyNode->mSkelIndex] * mZ;
+#ifdef DEBUG_PRINT
+        std::cout << " + Z(" << mSkelIndex << ")^T A(" << mParentBodyNode->mSkelIndex << ", " << mParentBodyNode->mSkelIndex << ") Z(" << mSkelIndex << ")";
+#endif
     }
+#ifdef DEBUG_PRINT
+    std::cout << std::endl;
+#endif
 
     if (mChildBodyNodes.size() > 0)
     {
         // A_{i,i} =
         //   S_i Psi_i S_i^T + P_i Ad(T_{\lambda(i),i}^{-1}) A_{\lambda(i),i}
         mA[mSkelIndex].noalias() = S * mPsi * S.transpose();
+#ifdef DEBUG_PRINT
+        std::cout << "A(" << mSkelIndex << ", " << mSkelIndex << ") = S(" << mSkelIndex << ") Psi(" << mSkelIndex << ") S(" << mSkelIndex << ")^T";
+#endif
         if (mParentBodyNode)
         {
             mA[mSkelIndex].noalias() += mP.transpose() * math::AdT(T.inverse()) *
-                    mParentBodyNode->mA[mParentBodyNode->mSkelIndex] *
+                                        mParentBodyNode->mA[mParentBodyNode->mSkelIndex] *
                     math::dAdT(T.inverse()) * mP;
+#ifdef DEBUG_PRINT
+            std::cout << " + P(" << mSkelIndex << ") Ad(T'(" << mParentBodyNode->mSkelIndex << ", " << mSkelIndex << ")) A(" << mParentBodyNode->mSkelIndex << ", " << mSkelIndex << ")";
+#endif
         }
+#ifdef DEBUG_PRINT
+        std::cout << std::endl;
+#endif
 
         // Y = I
         mY = math::Inertia::Identity();
+#ifdef DEBUG_PRINT
+        std::cout << "I(" << mSkelIndex << ", " << mSkelIndex << ") = I" << std::endl;
+#endif
     }
+#ifdef DEBUG_PRINT
+    std::cout << std::endl;
+#endif
     // Assigning
     // TODO: block assign
     for(int i = 0; i < nGenCoords; i++)
@@ -1194,80 +1137,167 @@ void BodyNode::aggregateInvMassMatrix(Eigen::MatrixXd& _MInv)
             _MInv(iSkelIdx, jSkelIdx) = MInvDiagonal(i, j);
         }
     }
+    int iSkelIdx = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+    _MInv.block(iSkelIdx, iSkelIdx, nGenCoords, nGenCoords) = MInvDiagonal;
 
     // Descendants
-//    int nDescendants = mDescendantBodyNodes.size();
-//    for (int iDes = 0; iDes < nDescendants; ++iDes)
-//    {
-//        BodyNode* jBodyNode = mDescendantBodyNodes[iDes];
-//        BodyNode* jBodyNodeParent = jBodyNode->getParentBodyNode();
-//        Eigen::MatrixXd MInvOffDiagonal =
-//                -mPsi * S.transpose() * jBodyNodeParent->mY * jBodyNode->mZ;
-//        if (mParentBodyNode)
-//            MInvOffDiagonal.noalias() += mZ.transpose() * mParentBodyNode->mA[jBodyNodeParent->mSkelIndex] * jBodyNode->mZ;
-//        if (jBodyNode->getNumChildBodyNodes() > 0)
-//        {
-//            math::Inertia tmpY =
-//                    math::dAdT(jBodyNode->getParentJoint()->getLocalTransform().inverse()) *
-//                    jBodyNode->mP;
+    int nDescendants = mDescendantBodyNodes.size();
+    for (int iDes = 0; iDes < nDescendants; ++iDes)
+    {
+        BodyNode* jBodyNode = mDescendantBodyNodes[iDes];
+        BodyNode* jBodyNodeParent = jBodyNode->getParentBodyNode();
+        Eigen::MatrixXd MInvOffDiagonal =
+                -mPsi * S.transpose() * jBodyNodeParent->mY * jBodyNode->mZ;
+#ifdef DEBUG_PRINT
+        std::cout << "M'(" << mSkelIndex << ", " << jBodyNode->mSkelIndex
+                  << ") = -Psi(" << mSkelIndex << ") S("
+                  << mSkelIndex << ")^T Y(" << mSkelIndex << ", "
+                  << jBodyNodeParent->mSkelIndex << ") Z("
+                  << jBodyNodeParent->mSkelIndex << ", "
+                  << jBodyNode->mSkelIndex << ")";
+#endif
+        if (mParentBodyNode)
+        {
+            MInvOffDiagonal.noalias() += mZ.transpose() * mParentBodyNode->mA[jBodyNodeParent->mSkelIndex] * jBodyNode->mZ;
+#ifdef DEBUG_PRINT
+            std::cout << " + Z(" << mSkelIndex << ")^T A("
+                      << mParentBodyNode->mSkelIndex << ", "
+                      << jBodyNodeParent->mSkelIndex << ") Z("
+                      << jBodyNode->mSkelIndex << ")";
+#endif
+        }
+#ifdef DEBUG_PRINT
+        std::cout << std::endl;
+#endif
+        if (jBodyNode->getNumChildBodyNodes() > 0)
+        {
+            math::Inertia tmpY =
+                    math::dAdT(jBodyNode->getParentJoint()->getLocalTransform().inverse()) *
+                    jBodyNode->mP;
 
-//            // Y
-//            jBodyNode->mY.noalias() = jBodyNodeParent->mY * tmpY;
+            // Y
+            jBodyNode->mY.noalias() = jBodyNodeParent->mY * tmpY;
+#ifdef DEBUG_PRINT
+            std::cout << "Y(" << mSkelIndex << ", " << jBodyNode->mSkelIndex
+                      << ") = Y(" << mSkelIndex << ", "
+                      << jBodyNodeParent->mSkelIndex << ") Ad*(T'("
+                      << jBodyNodeParent->mSkelIndex << ", "
+                      << jBodyNode->mSkelIndex << ")) P("
+                      << jBodyNode->mSkelIndex << ")" << std::endl;
+#endif
 
-//            // A
-//            mA[jBodyNode->mSkelIndex].noalias() = mA[jBodyNodeParent->mSkelIndex] * tmpY;
-//        }
+            // A
+            mA[jBodyNode->mSkelIndex].noalias() = mA[jBodyNodeParent->mSkelIndex] * tmpY;
+#ifdef DEBUG_PRINT
+            std::cout << "A(" << mSkelIndex << ", " << jBodyNode->mSkelIndex
+                      << ") = A(" << mSkelIndex << ", "
+                      << jBodyNodeParent->mSkelIndex << ") Ad*(T'("
+                      << jBodyNodeParent->mSkelIndex << ", "
+                      << jBodyNode->mSkelIndex << ")) P("
+                      << jBodyNode->mSkelIndex << ")" << std::endl;
+#endif
+        }
+#ifdef DEBUG_PRINT
+        std::cout << std::endl;
+#endif
 
-//        // Assigning
-//        // TODO: block assign
-//        int m = jBodyNode->getParentJoint()->getNumGenCoords();
-//        for(int i = 0; i < nGenCoords; i++)
-//        {
-//            int iSkelIdx = mParentJoint->getGenCoord(i)->getSkeletonIndex();
-//            for(int j = 0; j < m; j++)
-//            {
-//                int jSkelIdx = jBodyNode->getParentJoint()->getGenCoord(j)->getSkeletonIndex();
-//                _MInv(iSkelIdx, jSkelIdx) = MInvOffDiagonal(i, j);
-//                _MInv(jSkelIdx, iSkelIdx) = MInvOffDiagonal(i, j);
-//            }
-//        }
-//    }
+        // Assigning
+        int m = jBodyNode->getParentJoint()->getNumGenCoords();
+        int iSkelIdx = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+        int jSkelIdx = jBodyNode->mParentJoint->getGenCoord(0)->getSkeletonIndex();
+        _MInv.block(iSkelIdx, jSkelIdx, nGenCoords, m) = MInvOffDiagonal;
+        _MInv.block(jSkelIdx, iSkelIdx, m, nGenCoords) = MInvOffDiagonal.transpose();
+    }
 
     // Relatives
-//    int nRelatives = mNephewAndYoungerBrotherBodyNodes.size();
-//    for (int iRel = 0; iRel < nRelatives; ++iRel)
-//    {
-//        BodyNode* jBodyNode = mNephewAndYoungerBrotherBodyNodes[iRel];
-//        BodyNode* jBodyNodeParent = jBodyNode->getParentBodyNode();
-//        assert(mParentBodyNode);
-//        Eigen::MatrixXd MInv2 = mZ.transpose() * mParentBodyNode->mA[jBodyNodeParent->mSkelIndex] * jBodyNode->mZ;
-//        if (jBodyNode->getNumChildBodyNodes() > 0)
-//        {
-//            math::Inertia tmpY =
-//                    math::dAdT(jBodyNode->getParentJoint()->getLocalTransform().inverse()) *
-//                    jBodyNode->mP;
+    int nRelatives = mNephewAndYoungerBrotherBodyNodes.size();
+    for (int iRel = 0; iRel < nRelatives; ++iRel)
+    {
+        BodyNode* jBodyNode = mNephewAndYoungerBrotherBodyNodes[iRel];
+        BodyNode* jBodyNodeParent = jBodyNode->getParentBodyNode();
+        assert(mParentBodyNode);
+        Eigen::MatrixXd MInv2 = mZ.transpose() * mParentBodyNode->mA[jBodyNodeParent->mSkelIndex] * jBodyNode->mZ;
+#ifdef DEBUG_PRINT
+        std::cout << "M'(" << mSkelIndex << ", " << jBodyNode->mSkelIndex
+                  << ") = Z(" << mSkelIndex << ")^T A("
+                  << mParentBodyNode->mSkelIndex << ", "
+                  << jBodyNodeParent->mSkelIndex << ") Z("
+                  << jBodyNode->mSkelIndex << ")";
+        std::cout << std::endl;
+#endif
+        if (jBodyNode->getNumChildBodyNodes() > 0)
+        {
+            math::Inertia tmpY = math::dAdT(T.inverse()) * mP;
 
-//            // Y
-//            jBodyNode->mY.noalias() = jBodyNodeParent->mY * tmpY;
+            //            // Y
+            //            jBodyNode->mY.noalias() = jBodyNodeParent->mY * tmpY;
 
-//            // A
-//            mA[jBodyNode->mSkelIndex].noalias() = mA[jBodyNodeParent->mSkelIndex] * tmpY;
-//        }
+            //            // A
+            //mA[jBodyNode->mSkelIndex].noalias() = mA[jBodyNodeParent->mSkelIndex] * tmpY;
+            mA[jBodyNode->mSkelIndex].noalias() = mP.transpose() * math::AdT(T.inverse()) * mParentBodyNode->mA[jBodyNode->mSkelIndex];
+#ifdef DEBUG_PRINT
+            std::cout << "A(" << mSkelIndex << ", " << jBodyNode->mSkelIndex
+                      << ") = P("
+                      << mSkelIndex << ") Ad*(T'("
+                      << mParentBodyNode->mSkelIndex << ", "
+                      << mSkelIndex << ")) A(" << mParentBodyNode->mSkelIndex << ", "
+                      << jBodyNode->mSkelIndex << ")" << std::endl;
+#endif
+        }
+#ifdef DEBUG_PRINT
+        std::cout << std::endl;
+#endif
+        // Assigning
+        int m = jBodyNode->getParentJoint()->getNumGenCoords();
+        int iSkelIdx = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+        int jSkelIdx = jBodyNode->mParentJoint->getGenCoord(0)->getSkeletonIndex();
+        _MInv.block(iSkelIdx, jSkelIdx, nGenCoords, m) = MInv2;
+        _MInv.block(jSkelIdx, iSkelIdx, m, nGenCoords) = MInv2.transpose();
+    }
+#ifdef DEBUG_PRINT
+    std::cout << "--------------------------------------------------------------------------------" << std::endl;
+#endif
+}
 
-//        // Assigning
-//        int m = jBodyNode->getParentJoint()->getNumGenCoords();
-//        for(int i = 0; i < nGenCoords; i++)
-//        {
-//            int iSkelIdx = mParentJoint->getGenCoord(i)->getSkeletonIndex();
-//            for(int j = 0; j < m; j++)
-//            {
-//                // TODO: need block asigning for performance
-//                int jSkelIdx = jBodyNode->getParentJoint()->getGenCoord(j)->getSkeletonIndex();
-//                _MInv(iSkelIdx, jSkelIdx) = MInv2(i, j);
-//                _MInv(jSkelIdx, iSkelIdx) = MInv2(i, j);
-//            }
-//        }
-//    }
+void BodyNode::aggregateCoriolisForceVector(Eigen::VectorXd& _C)
+{
+    aggregateCombinedVector(_C, Eigen::Vector3d::Zero());
+}
+
+void BodyNode::aggregateGravityForceVector_OLD(Eigen::VectorXd& _g,
+                                               const Eigen::Vector3d& _gravity)
+{
+    if (mGravityMode == true)
+        mFgravity = mI * math::AdInvRLinear(mW, _gravity);
+    else
+        mFgravity.setZero();
+
+    Eigen::VectorXd localForce = -(mBodyJacobian.transpose() * mFgravity);
+
+    for(int i = 0; i < getNumDependentGenCoords(); i++)
+        _g(mDependentGenCoordIndices[i]) += localForce(i);
+}
+
+void BodyNode::aggregateGravityForceVector(Eigen::VectorXd& _g,
+                                           const Eigen::Vector3d& _gravity)
+{
+    if (mGravityMode == true)
+        mAFgravity = mI * math::AdInvRLinear(mW, _gravity);
+    else
+        mAFgravity.setZero();
+
+    for (std::vector<BodyNode*>::const_iterator it = mChildBodyNodes.begin();
+         it != mChildBodyNodes.end(); ++it)
+    {
+        mAFgravity += math::dAdInvT((*it)->mParentJoint->getLocalTransform(),
+                              (*it)->mAFgravity);
+    }
+
+    Eigen::VectorXd g = -(mParentJoint->getLocalJacobian().transpose() * mAFgravity);
+
+    int nGenCoords = mParentJoint->getNumGenCoords();
+    int iStart = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+    _g.segment(iStart, nGenCoords) = g;
 }
 
 void BodyNode::updateW()
@@ -1286,41 +1316,59 @@ void BodyNode::updateW()
     }
 }
 
-void BodyNode::aggregateCombinedVector(Eigen::VectorXd& _Cg, const Eigen::Vector3d& _gravity)
+void BodyNode::aggregateCombinedVector(Eigen::VectorXd& _Cg,
+                                       const Eigen::Vector3d& _gravity)
 {
-    //    mH =
+    // H(i) = I(i) * W(i) -
+    //        dad{V}(I(i) * V(i)) + sum(k \in children) dAd_{T(i,j)^{-1}}(H(k))
     if (mGravityMode == true)
         mFgravity = mI * math::AdInvRLinear(mW, _gravity);
     else
         mFgravity.setZero();
 
-    mH = mI * mdV;                // Inertial force
-    //    if (_withExternalForces)
-    //        mF -= mFext;              // External force
-    mH -= mFgravity;              // Gravity force
-    mH -= math::dad(mV, mI * mV); // Coriolis force
+    mH = mI * mW2;
+    mH -= mFgravity;
+    mH -= math::dad(mV, mI * mV);
 
-    for (std::vector<BodyNode*>::iterator iChildBody = mChildBodyNodes.begin();
-         iChildBody != mChildBodyNodes.end();
-         ++iChildBody)
+    for (std::vector<BodyNode*>::iterator it = mChildBodyNodes.begin();
+         it != mChildBodyNodes.end();
+         ++it)
     {
-        Joint* childJoint = (*iChildBody)->getParentJoint();
-        assert(childJoint != NULL);
-
-        mH += math::dAdInvT(childJoint->getLocalTransform(), (*iChildBody)->mH);
+        mH += math::dAdInvT((*it)->getParentJoint()->getLocalTransform(),
+                            (*it)->mH);
     }
     Eigen::VectorXd Cg = mParentJoint->getLocalJacobian().transpose() * mH;
 
     // Assigning
     int nGenCoords = mParentJoint->getNumGenCoords();
-    for(int i = 0; i < nGenCoords; i++)
+    int iStart = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+    _Cg.segment(iStart, nGenCoords) = Cg;
+}
+
+void BodyNode::aggregateExternalForces_OLD(Eigen::VectorXd& _Fext)
+{
+    Eigen::VectorXd localForce = mBodyJacobian.transpose() * mFext;
+
+    for(int i = 0; i < getNumDependentGenCoords(); i++)
+        _Fext(mDependentGenCoordIndices[i]) += localForce(i);
+}
+
+void BodyNode::aggregateExternalForces(Eigen::VectorXd& _Fext)
+{
+    mAFext = mFext;
+
+    for (std::vector<BodyNode*>::const_iterator it = mChildBodyNodes.begin();
+         it != mChildBodyNodes.end(); ++it)
     {
-        int iSkelIdx = mParentJoint->getGenCoord(i)->getSkeletonIndex();
-        {
-            // TODO: need block asigning for performance
-            _Cg(iSkelIdx) = Cg(i);
-        }
+        mAFext += math::dAdInvT((*it)->mParentJoint->getLocalTransform(),
+                                (*it)->mAFext);
     }
+
+    Eigen::VectorXd Fext = mParentJoint->getLocalJacobian().transpose() * mAFext;
+
+    int nGenCoords = mParentJoint->getNumGenCoords();
+    int iStart = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+    _Fext.segment(iStart, nGenCoords) = Fext;
 }
 
 void BodyNode::_updateGeralizedInertia()

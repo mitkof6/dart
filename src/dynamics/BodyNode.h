@@ -302,14 +302,14 @@ public:
     /// Coordinate transformations are applied when needed. The point of
     /// application and the force in local coordinates are stored in mContacts.
     /// When conversion is needed, make sure the transformations are avaialble.
-    void addExtForce(const Eigen::Vector3d& _offset,
-                     const Eigen::Vector3d& _force,
+    void addExtForce(const Eigen::Vector3d& _force,
+                     const Eigen::Vector3d& _offset = Eigen::Vector3d::Zero(),
                      bool _isOffsetLocal = true,
                      bool _isForceLocal = false);
 
     /// @brief Set Applying linear Cartesian forces to this node.
-    void setExtForce(const Eigen::Vector3d& _offset,
-                     const Eigen::Vector3d& _force,
+    void setExtForce(const Eigen::Vector3d& _force,
+                     const Eigen::Vector3d& _offset = Eigen::Vector3d::Zero(),
                      bool _isOffsetLocal = true,
                      bool _isForceLocal = false);
 
@@ -416,13 +416,6 @@ protected:
     void update_F_fs();
 
     /// @brief
-    void updateZ();
-
-    /// @brief Aggregate the external forces mFext in the generalized
-    ///        coordinates recursively.
-    void aggregateExternalForces(Eigen::VectorXd& _Fext);
-
-    /// @brief
     void aggregateMassMatrix_OLD(Eigen::MatrixXd& M);
     void aggregateMassMatrix(Eigen::MatrixXd& _M);
 
@@ -431,11 +424,23 @@ protected:
     void aggregateInvMassMatrix(Eigen::MatrixXd& _MInv);
 
     /// @brief
-    void updateW();
+    void aggregateCoriolisForceVector(Eigen::VectorXd& _C);
 
     /// @brief
+    void aggregateGravityForceVector_OLD(Eigen::VectorXd& _g,
+                                         const Eigen::Vector3d& _gravity);
+    void aggregateGravityForceVector(Eigen::VectorXd& _g,
+                                     const Eigen::Vector3d& _gravity);
+
+    /// @brief
+    void updateW();
     void aggregateCombinedVector(Eigen::VectorXd& _Cg,
                                  const Eigen::Vector3d& _gravity);
+
+    /// @brief Aggregate the external forces mFext in the generalized
+    ///        coordinates recursively.
+    void aggregateExternalForces_OLD(Eigen::VectorXd& _Fext);
+    void aggregateExternalForces(Eigen::VectorXd& _Fext);
 
     //--------------------------------------------------------------------------
     // General properties
@@ -571,6 +576,8 @@ protected:
     math::Jacobian mZ;
     Eigen::Vector6d mW2;
     Eigen::Vector6d mH;
+    Eigen::Vector6d mAFgravity; // Ariticulated gravity force
+    Eigen::Vector6d mAFext; // Articulated external force
 
     /// @brief
     Eigen::MatrixXd mM;
