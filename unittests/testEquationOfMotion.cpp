@@ -411,53 +411,53 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
 /******************************************************************************/
 TEST_F(EOM, EquationOfMotion)
 {
-//    dtdbg << "single_pendulum.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum.skel");
+    dtdbg << "single_pendulum.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum.skel");
 
-//    dtdbg << "single_pendulum_euler_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum_euler_joint.skel");
+    dtdbg << "single_pendulum_euler_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum_euler_joint.skel");
 
-//    dtdbg << "single_pendulum_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum_ball_joint.skel");
+    dtdbg << "single_pendulum_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum_ball_joint.skel");
 
-//    dtdbg << "double_pendulum.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum.skel");
+    dtdbg << "double_pendulum.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum.skel");
 
-//    dtdbg << "double_pendulum_euler_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_euler_joint.skel");
+    dtdbg << "double_pendulum_euler_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_euler_joint.skel");
 
-//    dtdbg << "double_pendulum_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_ball_joint.skel");
+    dtdbg << "double_pendulum_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_ball_joint.skel");
 
-//    dtdbg << "serial_chain_revolute_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_revolute_joint.skel");
+    dtdbg << "serial_chain_revolute_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_revolute_joint.skel");
 
-//    dtdbg << "serial_chain_eulerxyz_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_eulerxyz_joint.skel");
+    dtdbg << "serial_chain_eulerxyz_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_eulerxyz_joint.skel");
 
-//    dtdbg << "serial_chain_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint.skel");
+    dtdbg << "serial_chain_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint.skel");
 
-//    dtdbg << "simple_tree_structure.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure.skel");
+    dtdbg << "simple_tree_structure.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure.skel");
 
-//    dtdbg << "simple_tree_structure_euler_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_euler_joint.skel");
+    dtdbg << "simple_tree_structure_euler_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_euler_joint.skel");
 
-//    dtdbg << "simple_tree_structure_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_ball_joint.skel");
+    dtdbg << "simple_tree_structure_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_ball_joint.skel");
 
-//    dtdbg << "tree_structure.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure.skel");
+    dtdbg << "tree_structure.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure.skel");
 
 //    dtdbg << "tree_structure_euler_joint.skel" << std::endl;
 //    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_euler_joint.skel");
 
-//    dtdbg << "tree_structure_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_ball_joint.skel");
+    dtdbg << "tree_structure_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_ball_joint.skel");
 
-//    dtdbg << "fullbody1.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
+    dtdbg << "fullbody1.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
 }
 
 /******************************************************************************/
