@@ -108,14 +108,14 @@ Eigen::Matrix3d eulerYZYToMatrix(const Eigen::Vector3d& angle);
 Eigen::Matrix3d eulerZXYToMatrix(const Eigen::Vector3d& angle);
 
 /// @brief get a transformation matrix given by the Euler ZYX angle,
-/// singularity : x[1] = -+ 0.5*PI
+/// singularity : angle[1] = -+ 0.5*PI
 Eigen::Matrix3d eulerZYXToMatrix(const Eigen::Vector3d& angle);
 
 /// @brief Get a transformation matrix given by the Euler ZXZ angle.
 Eigen::Matrix3d eulerZXZToMatrix(const Eigen::Vector3d& angle);
 
 /// @brief Get a transformation matrix given by the Euler ZYZ angle,
-/// singularity : x[1] = 0, PI
+/// singularity : angle[1] = 0, PI
 Eigen::Matrix3d eulerZYZToMatrix(const Eigen::Vector3d& angle);
 
 //------------------------------------------------------------------------------

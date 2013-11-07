@@ -36,7 +36,10 @@
  */
 
 #include <iostream>
+
+#include <Eigen/LU>
 #include <gtest/gtest.h>
+
 #include "TestHelpers.h"
 
 #include "common/Console.h"
@@ -72,15 +75,17 @@ public:
 /******************************************************************************/
 void EOM::equationsOfMotionTest(const std::string& _fileName)
 {
-    bool isRandomControlInput = true;
+    bool debugPrint = false;
+
+    bool isRandomControlInput = false;
     double lowerControlInput = -0.001;
     double upperControlInput = 0.001;
 
-    bool isRandomExternalForce = true;
+    bool isRandomExternalForce = false;
     double lowerExternalForce = -0.001;
     double upperExternalForce = 0.001;
 
-    bool isJointDamping = true;
+    bool isJointDamping = false;
     double dampingCoeff = 0.001;
 
     simulation::World* myWorld = utils::SkelParser::readSkelFile(_fileName);
@@ -109,7 +114,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
         }
     }
 
-    //
+    // Step forward
     for (int i = 0; i < nSteps; i++)
     {
         myWorld->step();
@@ -122,7 +127,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // Mass matrix
             Eigen::MatrixXd M_OLD = skeleton->getMassMatrix_OLD();
             Eigen::MatrixXd M = skeleton->getMassMatrix();
-            if (!equals(M_OLD, M))
+            if (debugPrint && !equals(M_OLD, M))
             {
                 std::cout << "M_OLD: " << M_OLD << std::endl;
                 std::cout << "M    : " << M << std::endl;
@@ -132,43 +137,52 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // Inverse mass matrix
             Eigen::MatrixXd MInv_OLD       = skeleton->getInvMassMatrix_OLD();
             Eigen::MatrixXd MInv           = skeleton->getInvMassMatrix();
-            if (!equals2(MInv_OLD, MInv))
-            {
-                std::cout << "M_OLD: \n" << M_OLD << std::endl;
-                std::cout << "M    : \n" << M << std::endl;
-                std::cout << "MInv_OLD: \n" << MInv_OLD << std::endl;
-                std::cout << "MInv    : \n" << MInv << std::endl;
-                std::cout << "Diff    : \n" << MInv - MInv_OLD << std::endl;
-                std::cout << "Psi     : \n" << skeleton->getBodyNode(0)->mPsi << std::endl;
-                std::cout << "AI      : \n" << skeleton->getBodyNode(0)->mAI << std::endl;
-                std::cout << "S       : \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
-                std::cout << "S^T AI S: \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
-                std::cout << "(S^T AI S)^{-1}: \n" << (skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian()).inverse() << std::endl;
-            }
-            EXPECT_TRUE(equals2(MInv_OLD, MInv));
-
-//            Eigen::MatrixXd I              = Eigen::MatrixXd::Identity(n,n);
-//            Eigen::MatrixXd M_MInv         = MInv * M;
-//            Eigen::MatrixXd MInv_M         = M * MInv;
-//            Eigen::MatrixXd MInv_M_OLD     = MInv * M_OLD;
-//            Eigen::MatrixXd M_OLD_MInv     = M_OLD * MInv;
-//            Eigen::MatrixXd MInv_OLD_M     = MInv_OLD * M;
-//            Eigen::MatrixXd M_MInv_OLD     = M * MInv_OLD;
-//            Eigen::MatrixXd MInv_OLD_M_OLD = MInv_OLD * M_OLD;
-//            Eigen::MatrixXd M_OLD_MInv_OLD = M_OLD* MInv_OLD;
-//            EXPECT_TRUE(equals(M_MInv, I));
-//            EXPECT_TRUE(equals(MInv_M, I));
-//            EXPECT_TRUE(equals(MInv_M_OLD, I));
-//            EXPECT_TRUE(equals(M_OLD_MInv, I));
-//            EXPECT_TRUE(equals(MInv_OLD_M, I));
-//            EXPECT_TRUE(equals(M_MInv_OLD, I));
+            Eigen::MatrixXd I              = Eigen::MatrixXd::Identity(n,n);
+            Eigen::MatrixXd M_MInv         = MInv * M;
+            Eigen::MatrixXd MInv_M         = M * MInv;
+            Eigen::MatrixXd MInv_M_OLD     = MInv * M_OLD;
+            Eigen::MatrixXd M_OLD_MInv     = M_OLD * MInv;
+            Eigen::MatrixXd MInv_OLD_M     = MInv_OLD * M;
+            Eigen::MatrixXd M_MInv_OLD     = M * MInv_OLD;
+            Eigen::MatrixXd MInv_OLD_M_OLD = MInv_OLD * M_OLD;
+            Eigen::MatrixXd M_OLD_MInv_OLD = M_OLD* MInv_OLD;
 //            EXPECT_TRUE(equals(MInv_OLD_M_OLD, I));
 //            EXPECT_TRUE(equals(M_OLD_MInv_OLD, I));
+            if (equals(MInv_OLD_M_OLD, I) && equals(M_OLD_MInv_OLD, I))
+            {
+                EXPECT_TRUE(equals(M_MInv, I));
+                EXPECT_TRUE(equals(MInv_M, I));
+                EXPECT_TRUE(equals(MInv_M_OLD, I));
+                EXPECT_TRUE(equals(M_OLD_MInv, I));
+                EXPECT_TRUE(equals(MInv_OLD_M, I));
+                EXPECT_TRUE(equals(M_MInv_OLD, I));
+
+                if (debugPrint &&
+                    (!equals(M_MInv, I) ||
+                     !equals(MInv_M, I) ||
+                     !equals(MInv_M_OLD, I) ||
+                     !equals(M_OLD_MInv, I) ||
+                     !equals(MInv_OLD_M, I) ||
+                     !equals(M_MInv_OLD, I)))
+                {
+                    std::cout << "M_OLD: \n" << M_OLD << std::endl;
+                    std::cout << "M    : \n" << M << std::endl;
+                    std::cout << "MInv_OLD: \n" << MInv_OLD << std::endl;
+                    std::cout << "MInv    : \n" << MInv << std::endl;
+                    std::cout << "Diff    : \n" << MInv - MInv_OLD << std::endl;
+                    std::cout << "M * MInv: \n" << M * MInv << std::endl;
+                    std::cout << "Psi     : \n" << skeleton->getBodyNode(0)->mPsi << std::endl;
+                    std::cout << "AI      : \n" << skeleton->getBodyNode(0)->mAI << std::endl;
+                    std::cout << "S       : \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
+                    std::cout << "S^T AI S: \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
+                    std::cout << "(S^T AI S)^{-1}: \n" << (skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian()).inverse() << std::endl;
+                }
+            }
 
             // Coriolis and gravity force vector
             Eigen::VectorXd Cg_OLD = skeleton->getCombinedVector_OLD();
             Eigen::VectorXd Cg     = skeleton->getCombinedVector();
-            if (!equals(Cg_OLD, Cg))
+            if (debugPrint && !equals(Cg_OLD, Cg))
             {
                 std::cout << "Cg_OLD: \n" << Cg_OLD << std::endl;
                 std::cout << "Cg    : \n" << Cg << std::endl;
@@ -178,7 +192,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // Coriolis force vector
             Eigen::VectorXd C_OLD = skeleton->getCoriolisForceVector_OLD();
             Eigen::VectorXd C     = skeleton->getCoriolisForceVector();
-            if (!equals(C_OLD, C))
+            if (debugPrint && !equals(C_OLD, C))
             {
                 std::cout << "C_OLD: \n" << C_OLD << std::endl;
                 std::cout << "C    : \n" << C << std::endl;
@@ -188,7 +202,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // Gravity force vector
             Eigen::VectorXd g_OLD = skeleton->getGravityForceVector_OLD();
             Eigen::VectorXd g     = skeleton->getGravityForceVector();
-            if (!equals(g_OLD, g))
+            if (debugPrint && !equals(g_OLD, g))
             {
                 std::cout << "g_OLD: \n" << g_OLD << std::endl;
                 std::cout << "g    : \n" << g << std::endl;
@@ -222,7 +236,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // External force vector
             Eigen::VectorXd Fext_OLD = skeleton->getExternalForceVector_OLD();
             Eigen::VectorXd Fext     = skeleton->getExternalForceVector();
-            if (!equals(Fext_OLD, Fext))
+            if (debugPrint && !equals(Fext_OLD, Fext))
             {
                 std::cout << "Fext_OLD: \n" << Fext_OLD << std::endl;
                 std::cout << "Fext    : \n" << Fext << std::endl;
@@ -245,7 +259,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             for (int j = 0; j < state.size(); ++j)
             {
 //                state[j] = math::random(-DART_PI*2.0, DART_PI*2.0);
-                state[j] = math::random(-DART_PI*0.40, DART_PI*0.40);
+                state[j] = math::random(-DART_PI*0.9, DART_PI*0.9);
 //                state[j] = DART_PI*0.5;
             }
             skeleton->setState(state);
@@ -253,7 +267,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // Mass matrix
             Eigen::MatrixXd M_OLD = skeleton->getMassMatrix_OLD();
             Eigen::MatrixXd M = skeleton->getMassMatrix();
-            if (!equals(M_OLD, M))
+            if (debugPrint && !equals(M_OLD, M))
             {
                 std::cout << "M_OLD: " << M_OLD << std::endl;
                 std::cout << "M    : " << M << std::endl;
@@ -263,43 +277,73 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // Inverse mass matrix
             Eigen::MatrixXd MInv_OLD       = skeleton->getInvMassMatrix_OLD();
             Eigen::MatrixXd MInv           = skeleton->getInvMassMatrix();
-            if (!equals2(MInv_OLD, MInv))
-            {
-                std::cout << "M_OLD: \n" << M_OLD << std::endl;
-                std::cout << "M    : \n" << M << std::endl;
-                std::cout << "MInv_OLD: \n" << MInv_OLD << std::endl;
-                std::cout << "MInv    : \n" << MInv << std::endl;
-                std::cout << "Diff    : \n" << MInv - MInv_OLD << std::endl;
-                std::cout << "Psi     : \n" << skeleton->getBodyNode(0)->mPsi << std::endl;
-                std::cout << "AI      : \n" << skeleton->getBodyNode(0)->mAI << std::endl;
-                std::cout << "S       : \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
-                std::cout << "S^T AI S: \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
-                std::cout << "(S^T AI S)^{-1}: \n" << (skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian()).inverse() << std::endl;
-            }
-            EXPECT_TRUE(equals2(MInv_OLD, MInv));
-
-//            Eigen::MatrixXd I              = Eigen::MatrixXd::Identity(n,n);
-//            Eigen::MatrixXd M_MInv         = MInv * M;
-//            Eigen::MatrixXd MInv_M         = M * MInv;
-//            Eigen::MatrixXd MInv_M_OLD     = MInv * M_OLD;
-//            Eigen::MatrixXd M_OLD_MInv     = M_OLD * MInv;
-//            Eigen::MatrixXd MInv_OLD_M     = MInv_OLD * M;
-//            Eigen::MatrixXd M_MInv_OLD     = M * MInv_OLD;
-//            Eigen::MatrixXd MInv_OLD_M_OLD = MInv_OLD * M_OLD;
-//            Eigen::MatrixXd M_OLD_MInv_OLD = M_OLD* MInv_OLD;
-//            EXPECT_TRUE(equals(M_MInv, I));
-//            EXPECT_TRUE(equals(MInv_M, I));
-//            EXPECT_TRUE(equals(MInv_M_OLD, I));
-//            EXPECT_TRUE(equals(M_OLD_MInv, I));
-//            EXPECT_TRUE(equals(MInv_OLD_M, I));
-//            EXPECT_TRUE(equals(M_MInv_OLD, I));
+            Eigen::MatrixXd I              = Eigen::MatrixXd::Identity(n,n);
+            Eigen::MatrixXd M_MInv         = MInv * M;
+            Eigen::MatrixXd MInv_M         = M * MInv;
+            Eigen::MatrixXd MInv_M_OLD     = MInv * M_OLD;
+            Eigen::MatrixXd M_OLD_MInv     = M_OLD * MInv;
+            Eigen::MatrixXd MInv_OLD_M     = MInv_OLD * M;
+            Eigen::MatrixXd M_MInv_OLD     = M * MInv_OLD;
+            Eigen::MatrixXd MInv_OLD_M_OLD = MInv_OLD * M_OLD;
+            Eigen::MatrixXd M_OLD_MInv_OLD = M_OLD* MInv_OLD;
 //            EXPECT_TRUE(equals(MInv_OLD_M_OLD, I));
 //            EXPECT_TRUE(equals(M_OLD_MInv_OLD, I));
+            if (equals(MInv_OLD_M_OLD, I) && equals(M_OLD_MInv_OLD, I))
+            {
+                EXPECT_TRUE(equals(M_MInv, I));
+                EXPECT_TRUE(equals(MInv_M, I));
+                EXPECT_TRUE(equals(MInv_M_OLD, I));
+                EXPECT_TRUE(equals(M_OLD_MInv, I));
+                EXPECT_TRUE(equals(MInv_OLD_M, I));
+                EXPECT_TRUE(equals(M_MInv_OLD, I));
+
+//                if (!equals(M_MInv, I) ||
+//                    !equals(MInv_M, I) ||
+//                    !equals(MInv_M_OLD, I) ||
+//                    !equals(M_OLD_MInv, I) ||
+//                    !equals(MInv_OLD_M, I) ||
+//                    !equals(M_MInv_OLD, I))
+//                {
+//                    Eigen::FullPivLU<Eigen::MatrixXd> lu(M_OLD);
+//                    std::cout << "The rank of M_OLD is" << lu.rank() << std::endl;
+//                    if (lu.isInvertible())
+//                    {
+//                        std::cout << "A is invertible, its inverse is:"
+//                                  << std::endl << lu.inverse() << std::endl;
+//                    }
+//                    else
+//                    {
+//                        std::cout << "Here's a matrix whose columns form a basis of the kernel a.k.a. nullspace of A:"
+//                                  << std::endl << lu.kernel() << std::endl;
+//                    }
+//                }
+
+                if (debugPrint &&
+                    (!equals(M_MInv, I) ||
+                     !equals(MInv_M, I) ||
+                     !equals(MInv_M_OLD, I) ||
+                     !equals(M_OLD_MInv, I) ||
+                     !equals(MInv_OLD_M, I) ||
+                     !equals(M_MInv_OLD, I)))
+                {
+                    std::cout << "M_OLD: \n" << M_OLD << std::endl;
+                    std::cout << "M    : \n" << M << std::endl;
+                    std::cout << "MInv_OLD: \n" << MInv_OLD << std::endl;
+                    std::cout << "MInv    : \n" << MInv << std::endl;
+                    std::cout << "Diff    : \n" << MInv - MInv_OLD << std::endl;
+                    std::cout << "M * MInv: \n" << M * MInv << std::endl;
+                    std::cout << "Psi     : \n" << skeleton->getBodyNode(0)->mPsi << std::endl;
+                    std::cout << "AI      : \n" << skeleton->getBodyNode(0)->mAI << std::endl;
+                    std::cout << "S       : \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
+                    std::cout << "S^T AI S: \n" << skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian() << std::endl;
+                    std::cout << "(S^T AI S)^{-1}: \n" << (skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian().transpose() * skeleton->getBodyNode(0)->mAI * skeleton->getBodyNode(0)->getParentJoint()->getLocalJacobian()).inverse() << std::endl;
+                }
+            }
 
             // Coriolis and gravity force vector
             Eigen::VectorXd Cg_OLD = skeleton->getCombinedVector_OLD();
             Eigen::VectorXd Cg     = skeleton->getCombinedVector();
-            if (!equals(Cg_OLD, Cg))
+            if (debugPrint && !equals(Cg_OLD, Cg))
             {
                 std::cout << "Cg_OLD: \n" << Cg_OLD << std::endl;
                 std::cout << "Cg    : \n" << Cg << std::endl;
@@ -309,7 +353,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // Coriolis force vector
             Eigen::VectorXd C_OLD = skeleton->getCoriolisForceVector_OLD();
             Eigen::VectorXd C     = skeleton->getCoriolisForceVector();
-            if (!equals(C_OLD, C))
+            if (debugPrint && !equals(C_OLD, C))
             {
                 std::cout << "C_OLD: \n" << C_OLD << std::endl;
                 std::cout << "C    : \n" << C << std::endl;
@@ -319,7 +363,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // Gravity force vector
             Eigen::VectorXd g_OLD = skeleton->getGravityForceVector_OLD();
             Eigen::VectorXd g     = skeleton->getGravityForceVector();
-            if (!equals(g_OLD, g))
+            if (debugPrint && !equals(g_OLD, g))
             {
                 std::cout << "g_OLD: \n" << g_OLD << std::endl;
                 std::cout << "g    : \n" << g << std::endl;
@@ -353,7 +397,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             // External force vector
             Eigen::VectorXd Fext_OLD = skeleton->getExternalForceVector_OLD();
             Eigen::VectorXd Fext     = skeleton->getExternalForceVector();
-            if (!equals(Fext_OLD, Fext))
+            if (debugPrint && !equals(Fext_OLD, Fext))
             {
                 std::cout << "Fext_OLD: \n" << Fext_OLD << std::endl;
                 std::cout << "Fext    : \n" << Fext << std::endl;
@@ -384,11 +428,20 @@ TEST_F(EOM, EquationOfMotion)
 //    dtdbg << "double_pendulum_ball_joint.skel" << std::endl;
 //    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_ball_joint.skel");
 
+//    dtdbg << "serial_chain_revolute_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_revolute_joint.skel");
+
+    dtdbg << "serial_chain_eulerxyz_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_eulerxyz_joint.skel");
+
+//    dtdbg << "serial_chain_ball_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint.skel");
+
 //    dtdbg << "simple_tree_structure.skel" << std::endl;
 //    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure.skel");
 
-//    dtdbg << "simple_tree_structure_euler_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_euler_joint.skel");
+    dtdbg << "simple_tree_structure_euler_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_euler_joint.skel");
 
 //    dtdbg << "simple_tree_structure_ball_joint.skel" << std::endl;
 //    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_ball_joint.skel");
@@ -396,8 +449,8 @@ TEST_F(EOM, EquationOfMotion)
 //    dtdbg << "tree_structure.skel" << std::endl;
 //    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure.skel");
 
-//    dtdbg << "tree_structure_euler_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_euler_joint.skel");
+    dtdbg << "tree_structure_euler_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_euler_joint.skel");
 
 //    dtdbg << "tree_structure_ball_joint.skel" << std::endl;
 //    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_ball_joint.skel");

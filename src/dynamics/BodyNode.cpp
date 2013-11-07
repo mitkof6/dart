@@ -886,13 +886,19 @@ void BodyNode::updateArticulatedInertia(double _timeStep)
         Eigen::MatrixXd K = Eigen::MatrixXd::Zero(dof, dof);
         for (int i = 0; i < dof; ++i)
             K(i, i) = mParentJoint->getDampingCoefficient(i);
-//        mPsiK = (mParentJoint->getLocalJacobian().transpose() * mAI_S +
-//                 _timeStep * K).inverse();
-        mPsiK = (mParentJoint->getLocalJacobian().transpose() * mAI_S +
-                 _timeStep * K).ldlt().solve(Eigen::MatrixXd::Identity(dof, dof));
-//        mPsi = (mParentJoint->getLocalJacobian().transpose() * mAI_S).inverse();
-        mPsi = (mParentJoint->getLocalJacobian().transpose() * mAI_S
-                ).ldlt().solve(Eigen::MatrixXd::Identity(dof, dof));
+        Eigen::MatrixXd omega =
+                mParentJoint->getLocalJacobian().transpose() * mAI_S;
+#ifndef NDEBUG
+        Eigen::FullPivLU<Eigen::MatrixXd> omegaKLU(omega + _timeStep * K);
+        Eigen::FullPivLU<Eigen::MatrixXd> omegaLU(omega);
+        assert(omegaKLU.isInvertible());
+        assert(omegaLU.isInvertible());
+#endif
+//        mPsiK = (omega + _timeStep * K).inverse();
+        mPsiK = (omega + _timeStep * K).ldlt().solve(
+                    Eigen::MatrixXd::Identity(dof, dof));
+//        mPsi = (omega).inverse();
+        mPsi = (omega).ldlt().solve(Eigen::MatrixXd::Identity(dof, dof));
     }
     assert(!math::isNan(mPsiK));
     assert(!math::isNan(mPsi));
@@ -1110,9 +1116,13 @@ void BodyNode::aggregateInvMassMatrix(Eigen::MatrixXd& _MInv)
 #endif
         if (mParentBodyNode)
         {
-            mA[mSkelIndex].noalias() += mP.transpose() * math::AdT(T.inverse()) *
-                                        mParentBodyNode->mA[mParentBodyNode->mSkelIndex] *
-                    math::dAdT(T.inverse()) * mP;
+//            mA[mSkelIndex].noalias() +=
+//                    mP.transpose() * math::AdT(T.inverse()) *
+//                    mParentBodyNode->mA[mParentBodyNode->mSkelIndex] *
+//                    math::dAdT(T.inverse()) * mP;
+            mA[mSkelIndex].noalias() +=
+                    mP.transpose() * math::AdT(T.inverse()) *
+                    mParentBodyNode->mA[mSkelIndex];
 #ifdef DEBUG_PRINT
             std::cout << " + P(" << mSkelIndex << ") Ad(T'(" << mParentBodyNode->mSkelIndex << ", " << mSkelIndex << ")) A(" << mParentBodyNode->mSkelIndex << ", " << mSkelIndex << ")";
 #endif

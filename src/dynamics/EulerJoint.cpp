@@ -134,6 +134,16 @@ inline void EulerJoint::updateJacobian()
         J1 <<    s2,       c2, 0.0, 0.0, 0.0, 0.0;
         J2 <<   0.0,      0.0, 1.0, 0.0, 0.0, 0.0;
 
+#ifndef NDEBUG
+        if (fabs(mCoordinate[1].get_q()) == DART_PI * 0.5)
+            std::cout << "Singular configuration in ZYX-euler joint ["
+                      << mName << "]. ("
+                      << mCoordinate[0].get_q() << ", "
+                      << mCoordinate[1].get_q() << ", "
+                      << mCoordinate[2].get_q() << ")"
+                      << std::endl;
+#endif
+
         break;
     }
     case AO_ZYX:
@@ -149,6 +159,17 @@ inline void EulerJoint::updateJacobian()
         J0 << -s1, s2*c1, c1*c2, 0.0, 0.0, 0.0;
         J1 << 0.0,    c2,   -s2, 0.0, 0.0, 0.0;
         J2 << 1.0,   0.0,   0.0, 0.0, 0.0, 0.0;
+
+#ifndef NDEBUG
+        if (fabs(mCoordinate[1].get_q()) == DART_PI * 0.5)
+            std::cout << "Singular configuration in ZYX-euler joint ["
+                      << mName << "]. ("
+                      << mCoordinate[0].get_q() << ", "
+                      << mCoordinate[1].get_q() << ", "
+                      << mCoordinate[2].get_q() << ")"
+                      << std::endl;
+#endif
+
         break;
     }
     default:
