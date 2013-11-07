@@ -90,12 +90,12 @@ void JOINTS::kinematicsTest(Joint* _joint)
 
     for (int idxTest = 0; idxTest < 100; ++idxTest)
     {
-        double dt = 0.000001;
+        double q_delta = 0.000001;
 
         for (int i = 0; i < dof; ++i)
         {
-            q(i) = random(-DART_PI*2.0, DART_PI*2.0);
-            dq(i) = random(-DART_PI*2.0, DART_PI*2.0);
+            q(i) = random(-DART_PI*1.0, DART_PI*1.0);
+            dq(i) = random(-DART_PI*1.0, DART_PI*1.0);
         }
 
         Eigen::VectorXd state = Eigen::VectorXd::Zero(2*dof);
@@ -130,7 +130,7 @@ void JOINTS::kinematicsTest(Joint* _joint)
 
             // b
             Eigen::VectorXd q_b = q;
-            q_b(i) += dt;
+            q_b(i) += q_delta;
             _joint->set_q(q_b);
             skeleton.setConfig(q_b);
             Eigen::Isometry3d T_b = _joint->getLocalTransform();
@@ -142,7 +142,7 @@ void JOINTS::kinematicsTest(Joint* _joint)
             // dTdq
             Eigen::Matrix4d T_a_eigen = T_a.matrix();
             Eigen::Matrix4d T_b_eigen = T_b.matrix();
-            Eigen::Matrix4d dTdq_eigen = (T_b_eigen - T_a_eigen) / dt;
+            Eigen::Matrix4d dTdq_eigen = (T_b_eigen - T_a_eigen) / q_delta;
             //Matrix4d dTdq_eigen = (T_b_eigen * T_a_eigen.inverse()) / dt;
 
             // J(i)
@@ -176,13 +176,13 @@ void JOINTS::kinematicsTest(Joint* _joint)
 
             // b
             Eigen::VectorXd q_b = q;
-            q_b(i) += dt;
+            q_b(i) += q_delta;
             _joint->set_q(q_b);
             skeleton.setConfig(q_b);
             Jacobian J_b = _joint->getLocalJacobian();
 
             //
-            Jacobian dJ_dq = (J_b - J_a) / dt;
+            Jacobian dJ_dq = (J_b - J_a) / q_delta;
 
             // J(i)
             numeric_dJ += dJ_dq * dq(i);

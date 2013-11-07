@@ -69,6 +69,8 @@ inline void BallJoint::updateTransform()
     mT = mT_ParentBodyToJoint *
             math::expAngular(q) *
             mT_ChildBodyToJoint.inverse();
+
+    assert(math::verifyTransform(mT));
 }
 
 inline void BallJoint::updateJacobian()
@@ -90,6 +92,8 @@ inline void BallJoint::updateJacobian()
     mS.col(0) = math::AdT(mT_ChildBodyToJoint, J0);
     mS.col(1) = math::AdT(mT_ChildBodyToJoint, J1);
     mS.col(2) = math::AdT(mT_ChildBodyToJoint, J2);
+
+    assert(!math::isNan(mS));
 }
 
 inline void BallJoint::updateJacobianTimeDeriv()
@@ -114,59 +118,18 @@ inline void BallJoint::updateJacobianTimeDeriv()
     mdS.col(0) = math::AdT(mT_ChildBodyToJoint, dJ0);
     mdS.col(1) = math::AdT(mT_ChildBodyToJoint, dJ1);
     mdS.col(2) = math::AdT(mT_ChildBodyToJoint, dJ2);
+
+    assert(!math::isNan(mdS));
 }
 
 void BallJoint::clampRotation()
 {
-//    Eigen::Vector3d exmap = get_q();
-
-//    double theta = exmap.norm();
-//    if (theta > M_PI)
+//    for (int i = 0; i < 3; i++)
 //    {
-//        exmap.normalize();
-//        exmap *= theta-2*M_PI;
-
-//        //BodyNode* node = jnt->getChildNode();
-//        int firstIndex = 0;
-//        if (jnt->getParentNode() != NULL)
-//            firstIndex = jnt->getParentNode()->getNumDependentDofs();
-
-//        // extract the local Jw
-//        Eigen::Matrix3d oldJwBody;
-//        for (int j = 0; j < 3; j++)
-//        {
-//            // XXX do not use node->mTq here because it's not computed if the recursive algorithm is used; instead the derivative matrix is (re)computed explicitly.
-//            Eigen::Matrix3d omegaSkewSymmetric = jnt->getDeriv(jnt->getDof(j)).topLeftCorner<3,3>()
-//                                          * node->getLocalTransform().topLeftCorner<3,3>().transpose();
-//            oldJwBody.col(j) = dart_math::fromSkewSymmetric(omegaSkewSymmetric);
-//        }
-
-//        // the new Jw
-//        Eigen::Matrix3d newJwBody;
-//        // set new dof values to joint for derivative evaluation
-//        for (int j = 0; j < 3; j++)
-//            jnt->getDof(j)->setValue(exmap[j]);
-
-//        // compute the new Jw from Rq*trans(R)
-//        Eigen::Matrix4d Tbody = jnt->getLocalTransform();
-//        for (int j = 0; j < 3; j++)
-//        {
-//            Eigen::Matrix3d omegaSkewSymmetric = jnt->getDeriv(jnt->getDof(j)).topLeftCorner<3,3>()*Tbody.topLeftCorner<3,3>().transpose();
-//            newJwBody.col(j) = dart_math::fromSkewSymmetric(omegaSkewSymmetric);
-//        }
-
-//        // solve new_qdot s.t. newJw*new_qdot = w
-//        // new_qdot = newJw.inverse()*w
-//        Eigen::Vector3d old_qdot; // extract old_qdot
-//        for (int j = 0; j < 3; j++)
-//            old_qdot[j] = _qdot[jnt->getDof(j)->getSkelIndex()];
-//        Eigen::Vector3d new_qdot = newJwBody.inverse()*oldJwBody*old_qdot;
-//        for (int j = 0; j < 3; j++)
-//        {
-//            int dofIndex = jnt->getDof(j)->getSkelIndex();
-//            _q[dofIndex] = exmap[j];
-//            _qdot[dofIndex] = new_qdot[j];
-//        }
+//        if( mCoordinate[i].get_q() > M_PI )
+//            mCoordinate[i].set_q(mCoordinate[i].get_q() - 2*M_PI);
+//        if( mCoordinate[i].get_q() < -M_PI )
+//            mCoordinate[i].set_q(mCoordinate[i].get_q() + 2*M_PI);
 //    }
 }
 

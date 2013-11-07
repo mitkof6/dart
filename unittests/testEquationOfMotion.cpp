@@ -94,7 +94,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
     myWorld->setGravity(Eigen::Vector3d(0.0, 0.0, -9.81));
     myWorld->setTimeStep(0.001);
 
-    double simTime = 1.000;
+    double simTime = 10.000;
     double timeStep = myWorld->getTimeStep();
     int nSteps = simTime / timeStep;
 
@@ -152,10 +152,10 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             {
                 EXPECT_TRUE(equals(M_MInv, I));
                 EXPECT_TRUE(equals(MInv_M, I));
-                EXPECT_TRUE(equals(MInv_M_OLD, I));
-                EXPECT_TRUE(equals(M_OLD_MInv, I));
-                EXPECT_TRUE(equals(MInv_OLD_M, I));
-                EXPECT_TRUE(equals(M_MInv_OLD, I));
+//                EXPECT_TRUE(equals(MInv_M_OLD, I));
+//                EXPECT_TRUE(equals(M_OLD_MInv, I));
+//                EXPECT_TRUE(equals(MInv_OLD_M, I));
+//                EXPECT_TRUE(equals(M_MInv_OLD, I));
 
                 if (debugPrint &&
                     (!equals(M_MInv, I) ||
@@ -258,8 +258,9 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             Eigen::VectorXd state = skeleton->getState();
             for (int j = 0; j < state.size(); ++j)
             {
-//                state[j] = math::random(-DART_PI*2.0, DART_PI*2.0);
-                state[j] = math::random(-DART_PI*0.9, DART_PI*0.9);
+                state[j] = math::random(-DART_PI*2.0, DART_PI*2.0);
+//                state[j] = math::random(-DART_PI*0.9, DART_PI*0.9);
+                state[j] = math::random(-DART_PI*0.4, DART_PI*0.4);
 //                state[j] = DART_PI*0.5;
             }
             skeleton->setState(state);
@@ -292,10 +293,10 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             {
                 EXPECT_TRUE(equals(M_MInv, I));
                 EXPECT_TRUE(equals(MInv_M, I));
-                EXPECT_TRUE(equals(MInv_M_OLD, I));
-                EXPECT_TRUE(equals(M_OLD_MInv, I));
-                EXPECT_TRUE(equals(MInv_OLD_M, I));
-                EXPECT_TRUE(equals(M_MInv_OLD, I));
+//                EXPECT_TRUE(equals(MInv_M_OLD, I));
+//                EXPECT_TRUE(equals(M_OLD_MInv, I));
+//                EXPECT_TRUE(equals(MInv_OLD_M, I));
+//                EXPECT_TRUE(equals(M_MInv_OLD, I));
 
 //                if (!equals(M_MInv, I) ||
 //                    !equals(MInv_M, I) ||
@@ -410,53 +411,53 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
 /******************************************************************************/
 TEST_F(EOM, EquationOfMotion)
 {
-//    dtdbg << "single_pendulum.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum.skel");
+    dtdbg << "single_pendulum.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum.skel");
 
     dtdbg << "single_pendulum_euler_joint.skel" << std::endl;
     equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum_euler_joint.skel");
 
-//    dtdbg << "single_pendulum_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum_ball_joint.skel");
+    dtdbg << "single_pendulum_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/single_pendulum_ball_joint.skel");
 
-//    dtdbg << "double_pendulum.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum.skel");
+    dtdbg << "double_pendulum.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum.skel");
 
     dtdbg << "double_pendulum_euler_joint.skel" << std::endl;
     equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_euler_joint.skel");
 
-//    dtdbg << "double_pendulum_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_ball_joint.skel");
+    dtdbg << "double_pendulum_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_ball_joint.skel");
 
-//    dtdbg << "serial_chain_revolute_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_revolute_joint.skel");
+    dtdbg << "serial_chain_revolute_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_revolute_joint.skel");
 
     dtdbg << "serial_chain_eulerxyz_joint.skel" << std::endl;
     equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_eulerxyz_joint.skel");
 
-//    dtdbg << "serial_chain_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint.skel");
+    dtdbg << "serial_chain_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint.skel");
 
-//    dtdbg << "simple_tree_structure.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure.skel");
+    dtdbg << "simple_tree_structure.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure.skel");
 
     dtdbg << "simple_tree_structure_euler_joint.skel" << std::endl;
     equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_euler_joint.skel");
 
-//    dtdbg << "simple_tree_structure_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_ball_joint.skel");
+    dtdbg << "simple_tree_structure_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_ball_joint.skel");
 
-//    dtdbg << "tree_structure.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure.skel");
+    dtdbg << "tree_structure.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure.skel");
 
     dtdbg << "tree_structure_euler_joint.skel" << std::endl;
     equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_euler_joint.skel");
 
-//    dtdbg << "tree_structure_ball_joint.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_ball_joint.skel");
+    dtdbg << "tree_structure_ball_joint.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_ball_joint.skel");
 
-//    dtdbg << "fullbody1.skel" << std::endl;
-//    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
+    dtdbg << "fullbody1.skel" << std::endl;
+    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
 }
 
 /******************************************************************************/
