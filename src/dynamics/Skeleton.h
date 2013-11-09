@@ -181,6 +181,7 @@ public:
     /// @brief Get inverse of mass matrix of the skeleton.
     const Eigen::MatrixXd& getInvMassMatrix_OLD();
     const Eigen::MatrixXd& getInvMassMatrix();
+    const Eigen::MatrixXd& getInvMassMatrix2();
 
     /// @brief Get Coriolis force vector of the skeleton.
     const Eigen::VectorXd& getCoriolisForceVector_OLD();
@@ -304,10 +305,12 @@ protected:
     /// @brief Inverse of mass matrix for the skeleton.
     Eigen::MatrixXd mMInv_OLD;
     Eigen::MatrixXd mMInv;
+    Eigen::MatrixXd mMInv2;
 
     /// @brief Dirty flag for the inverse of mass matrix.
     bool mIsMassInvMatrixDirty_OLD;
     bool mIsMassInvMatrixDirty;
+    bool mIsMassInvMatrixDirty2;
 
     /// @brief Coriolis vector for the skeleton which is C(q,dq)*dq.
     Eigen::VectorXd mCvec_OLD;
@@ -359,6 +362,7 @@ private:
     /// @brief Update inverse of mass matrix of the skeleton.
     void _updateInvMassMatrix_OLD();
     void _updateInvMassMatrix();
+    void _updateInvMassMatrix2();
 
     /// @brief Update Coriolis force vector of the skeleton.
     void _updateCoriolisForceVector_OLD();

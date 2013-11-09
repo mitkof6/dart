@@ -184,6 +184,22 @@ inline void EulerJoint::updateJacobian()
     mS.col(2) = math::AdT(mT_ChildBodyToJoint, J2);
 
     assert(!math::isNan(mS));
+
+#ifndef NDEBUG
+    Eigen::MatrixXd JTJ = mS.transpose() * mS;
+    Eigen::FullPivLU<Eigen::MatrixXd> luJTJ(JTJ);
+//    Eigen::FullPivLU<Eigen::MatrixXd> luS(mS);
+    double det = luJTJ.determinant();
+    if (det < 1e-5)
+    {
+        std::cout << "ill-conditioned Jacobian in joint [" << mName << "]."
+                  << " The determinant of the Jacobian is (" << det << ")."
+                  << std::endl;
+        std::cout << "rank is (" << luJTJ.rank() << ")." << std::endl;
+        std::cout << "det is (" << luJTJ.determinant() << ")." << std::endl;
+//        std::cout << "mS: \n" << mS << std::endl;
+    }
+#endif
 }
 
 inline void EulerJoint::updateJacobianTimeDeriv()

@@ -265,14 +265,14 @@ public:
 
     /// @brief Get generalized Jacobian at the origin of this body node where
     ///        the Jacobian is expressed in this body node frame.
-    const math::Jacobian& getBodyJacobian() const;
+    const math::Jacobian& getBodyJacobian();
 
     /// @brief Get generalized Jacobian at a point on this body node where the
     ///        Jacobian is expressed in the world frame.
     /// @param[in] _offset Point vector from the origin of this body frame where
     ///                    the point vector is expressed in the world frame.
     math::Jacobian getWorldJacobian(
-            const Eigen::Vector3d& _offset = Eigen::Vector3d::Zero()) const;
+            const Eigen::Vector3d& _offset = Eigen::Vector3d::Zero());
 
     /// @brief Get time derivative of generalized Jacobian at the origin of this
     ///        body node where the Jacobian is expressed in this body node
@@ -381,7 +381,7 @@ protected:
     // Sub-functions for Recursive Kinematics Algorithms
     //--------------------------------------------------------------------------
     /// @brief Update local transformations and world transformations.
-    void updateTransform(bool _updateJacobian = true);
+    void updateTransform();
 
     /// @brief
     void updateVelocity();
@@ -524,6 +524,9 @@ protected:
     math::Jacobian mBodyJacobian;
 
     /// @brief
+    bool mIsBodyJacobianDirty;
+
+    /// @brief
     math::Jacobian mBodyJacobianTimeDeriv;
 
     /// @brief Generalized body velocity w.r.t. body frame.
@@ -588,6 +591,18 @@ protected:
 
     /// @brief
     std::vector<Eigen::Vector6d, Eigen::aligned_allocator<Eigen::Vector6d> > mContactForces;
+
+    void updateMassInverseMatrix2();
+    void aggregateInvMassMatrix2(Eigen::MatrixXd& _MInvCol, int _col);
+
+    Eigen::VectorXd mMInv2_a;
+    Eigen::Vector6d mMInv2_b;
+    Eigen::Vector6d mMInv2_c;
+    Eigen::VectorXd mMInv2_MInvVec;
+    Eigen::Vector6d mMInv2_U;
+
+    /// @brief
+    void _updateBodyJacobian();
 
 private:
     /// @brief

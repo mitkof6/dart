@@ -242,16 +242,19 @@ Eigen::Vector6d BodyNode::getWorldAcceleration(
     return math::AdT(T, mdV);
 }
 
-const math::Jacobian& BodyNode::getBodyJacobian() const
+const math::Jacobian& BodyNode::getBodyJacobian()
 {
+    if (mIsBodyJacobianDirty)
+        _updateBodyJacobian();
+
     return mBodyJacobian;
 }
 
-math::Jacobian BodyNode::getWorldJacobian(const Eigen::Vector3d& _offset) const
+math::Jacobian BodyNode::getWorldJacobian(const Eigen::Vector3d& _offset)
 {
     Eigen::Isometry3d T = mW;
     T.translation() = -_offset;
-    return math::AdTJac(T, mBodyJacobian);
+    return math::AdTJac(T, getBodyJacobian());
 }
 
 const math::Jacobian& BodyNode::getBodyJacobianTimeDeriv() const
@@ -456,7 +459,7 @@ void BodyNode::drawMarkers(renderer::RenderInterface* _ri,
     _ri->popMatrix();
 }
 
-void BodyNode::updateTransform(bool _updateJacobian)
+void BodyNode::updateTransform()
 {
     mParentJoint->updateTransform();
     if (mParentBodyNode)
@@ -470,47 +473,7 @@ void BodyNode::updateTransform(bool _updateJacobian)
     }
     assert(math::verifyTransform(mW));
 
-//    if (_updateJacobian == false)
-//        return;
-
     mParentJoint->updateJacobian();
-
-    //--------------------------------------------------------------------------
-    // Jacobian update
-    //
-    // J = | J1 J2 ... Jn |
-    //   = | Ad(T(i,i-1), J_parent) J_local |
-    //
-    //   J_parent: (6 x parentDOF)
-    //    J_local: (6 x localDOF)
-    //         Ji: (6 x 1) se3
-    //          n: number of dependent coordinates
-    //--------------------------------------------------------------------------
-
-    const int numLocalDOFs = mParentJoint->getNumGenCoords();
-    const int numParentDOFs = getNumDependentGenCoords()-numLocalDOFs;
-
-    // Parent Jacobian
-    if (mParentBodyNode != NULL)
-    {
-        assert(mParentBodyNode->mBodyJacobian.cols() + mParentJoint->getNumGenCoords()
-               == mBodyJacobian.cols());
-
-        for (int i = 0; i < numParentDOFs; ++i)
-        {
-            assert(mParentJoint);
-            mBodyJacobian.col(i) = math::AdInvT(
-                                       mParentJoint->getLocalTransform(),
-                                       mParentBodyNode->mBodyJacobian.col(i));
-        }
-    }
-
-    // Local Jacobian
-    for(int i = 0; i < numLocalDOFs; i++)
-    {
-        mBodyJacobian.col(numParentDOFs + i) =
-                mParentJoint->getLocalJacobian().col(i);
-    }
 }
 
 void BodyNode::updateVelocity()
@@ -980,9 +943,8 @@ void BodyNode::update_F_fs()
 
 void BodyNode::aggregateMassMatrix_OLD(Eigen::MatrixXd& _M)
 {
-    mM.triangularView<Eigen::Upper>() = mBodyJacobian.transpose() *
-                                        mI *
-                                        mBodyJacobian;
+    mM.triangularView<Eigen::Upper>() =
+            getBodyJacobian().transpose() * mI * getBodyJacobian();
     mM.triangularView<Eigen::StrictlyLower>() = mM.transpose();
 
     for(int i = 0; i < getNumDependentGenCoords(); i++)
@@ -994,88 +956,67 @@ void BodyNode::aggregateMassMatrix(Eigen::MatrixXd& _M)
 {
     BodyNode* currBodyNode = this;
     BodyNode* childBodyNode = NULL;
-
     int iDof = mParentJoint->getNumGenCoords();
-
-    Eigen::MatrixXd M(iDof,iDof);
-
     const math::Jacobian& J = mParentJoint->getLocalJacobian();
 
     //--------------------------------------------------------------------------
     // M(j,j)
     //--------------------------------------------------------------------------
     math::Inertia tmpI = mI;
-
     for (int i = 0; i < getNumChildBodyNodes(); i++)
     {
         const Joint* childJoint         = mChildBodyNodes[i]->getParentJoint();
         const Eigen::Isometry3d& childT = childJoint->getLocalTransform();
-        tmpI += mChildBodyNodes[i]->mIt * math::AdT(childT.inverse());
+        tmpI.noalias() += mChildBodyNodes[i]->mIt * math::AdT(childT.inverse());
     }
-
     if (iDof > 0)
     {
-        M = J.transpose() * tmpI * J;
-
         // Assigning
         int iSkelIdx = mParentJoint->getGenCoord(0)->getSkeletonIndex();
-        _M.block(iSkelIdx, iSkelIdx, iDof, iDof) = M;
+        _M.block(iSkelIdx, iSkelIdx, iDof, iDof).noalias() = J.transpose() * tmpI * J;
     }
-
     childBodyNode = currBodyNode;
     currBodyNode = currBodyNode->getParentBodyNode();
 
+    //--------------------------------------------------------------------------
+    // M(i,j) where i = \lambda(j)
+    //--------------------------------------------------------------------------
     if (currBodyNode)
     {
-        const Joint* childJoint         = childBodyNode->getParentJoint();
-        const Eigen::Isometry3d& childT = childJoint->getLocalTransform();
-        mIt = tmpI = math::dAdT(childT.inverse()) * tmpI;
-
+        const Eigen::Isometry3d& childT = childBodyNode->getParentJoint()->getLocalTransform();
+        mIt.noalias() = math::dAdT(childT.inverse()) * tmpI;
+        tmpI = mIt;
         int jDof = currBodyNode->getParentJoint()->getNumGenCoords();
-        Eigen::MatrixXd M2(jDof,iDof);
-        const math::Jacobian& J2 = currBodyNode->getParentJoint()->getLocalJacobian();
-
         if (iDof > 0 && jDof > 0)
         {
-            M2 = J2.transpose() * tmpI * J;
-
             // Assigning
             int iSkelIdx = currBodyNode->getParentJoint()->getGenCoord(0)->getSkeletonIndex();
             int jSkelIdx = mParentJoint->getGenCoord(0)->getSkeletonIndex();
-            _M.block(iSkelIdx, jSkelIdx, jDof, iDof) = M2;
-            _M.block(jSkelIdx, iSkelIdx, iDof, jDof) = M2.transpose();
+            _M.block(iSkelIdx, jSkelIdx, jDof, iDof).noalias() =
+                    currBodyNode->getParentJoint()->getLocalJacobian().transpose() * tmpI * J;
+            _M.block(jSkelIdx, iSkelIdx, iDof, jDof) = _M.block(iSkelIdx, jSkelIdx, jDof, iDof).transpose();
         }
-
         childBodyNode = currBodyNode;
         currBodyNode = currBodyNode->getParentBodyNode();
     }
 
     //--------------------------------------------------------------------------
-    // M(j,k), k = lambda(j), lambda(lambda(j)), ... , base
+    // M(k,j), k = lambda^2(j), lambda^3(j), ... , base
     //--------------------------------------------------------------------------
     while (currBodyNode)
     {
         currBodyNode->mIt = math::Inertia::Zero();
-
-        const Joint* childJoint         = childBodyNode->getParentJoint();
-        const Eigen::Isometry3d& childT = childJoint->getLocalTransform();
+        const Eigen::Isometry3d& childT = childBodyNode->getParentJoint()->getLocalTransform();
         tmpI = math::dAdT(childT.inverse()) * tmpI;
-
         int jDof = currBodyNode->getParentJoint()->getNumGenCoords();
-        Eigen::MatrixXd M2(jDof,iDof);
-        const math::Jacobian& J2 = currBodyNode->getParentJoint()->getLocalJacobian();
-
         if (iDof > 0 && jDof > 0)
         {
-            M2 = J2.transpose() * tmpI * J;
-
             // Assigning
             int iSkelIdx = currBodyNode->getParentJoint()->getGenCoord(0)->getSkeletonIndex();
             int jSkelIdx = mParentJoint->getGenCoord(0)->getSkeletonIndex();
-            _M.block(iSkelIdx, jSkelIdx, jDof, iDof) = M2;
-            _M.block(jSkelIdx, iSkelIdx, iDof, jDof) = M2.transpose();
+            _M.block(iSkelIdx, jSkelIdx, jDof, iDof).noalias() = currBodyNode->getParentJoint()->getLocalJacobian().transpose() * tmpI * J;
+            _M.block(jSkelIdx, iSkelIdx, iDof, jDof) = _M.block(iSkelIdx, jSkelIdx, jDof, iDof).transpose();
         }
-
         childBodyNode = currBodyNode;
         currBodyNode = currBodyNode->getParentBodyNode();
     }
@@ -1083,9 +1024,9 @@ void BodyNode::aggregateMassMatrix(Eigen::MatrixXd& _M)
 
 void BodyNode::update_O_P_Z()
 {
-    mO = mAI * mParentJoint->getLocalJacobian() * mPsi;
-    mP = math::Inertia::Identity() - mO * mParentJoint->getLocalJacobian().transpose();
-    mZ = math::dAdT(mParentJoint->getLocalTransform().inverse()) * mO;
+    mO.noalias() = mAI * mParentJoint->getLocalJacobian() * mPsi;
+    mP.noalias() = math::Inertia::Identity() - mO * mParentJoint->getLocalJacobian().transpose();
+    mZ.noalias() = math::dAdT(mParentJoint->getLocalTransform().inverse()) * mO;
 }
 
 //#define DEBUG_PRINT
@@ -1106,7 +1047,7 @@ void BodyNode::aggregateInvMassMatrix(Eigen::MatrixXd& _MInv)
 #endif
         if (mParentBodyNode)
         {
-            MInvDiagonal += mZ.transpose() *
+            MInvDiagonal.noalias() += mZ.transpose() *
                     mParentBodyNode->mA[mParentBodyNode->mSkelIndex] * mZ;
 #ifdef DEBUG_PRINT
             std::cout << " + Z(" << mSkelIndex << ")^T A(" << mParentBodyNode->mSkelIndex << ", " << mParentBodyNode->mSkelIndex << ") Z(" << mSkelIndex << ")";
@@ -1294,7 +1235,7 @@ void BodyNode::aggregateGravityForceVector_OLD(Eigen::VectorXd& _g,
     else
         mFgravity.setZero();
 
-    Eigen::VectorXd localForce = -(mBodyJacobian.transpose() * mFgravity);
+    Eigen::VectorXd localForce = -(getBodyJacobian().transpose() * mFgravity);
 
     for(int i = 0; i < getNumDependentGenCoords(); i++)
         _g(mDependentGenCoordIndices[i]) += localForce(i);
@@ -1373,7 +1314,7 @@ void BodyNode::aggregateCombinedVector(Eigen::VectorXd& _Cg,
 
 void BodyNode::aggregateExternalForces_OLD(Eigen::VectorXd& _Fext)
 {
-    Eigen::VectorXd localForce = mBodyJacobian.transpose() * mFext;
+    Eigen::VectorXd localForce = getBodyJacobian().transpose() * mFext;
 
     for(int i = 0; i < getNumDependentGenCoords(); i++)
         _Fext(mDependentGenCoordIndices[i]) += localForce(i);
@@ -1397,6 +1338,113 @@ void BodyNode::aggregateExternalForces(Eigen::VectorXd& _Fext)
         int iStart = mParentJoint->getGenCoord(0)->getSkeletonIndex();
         _Fext.segment(iStart, nGenCoords) = Fext;
     }
+}
+
+void BodyNode::updateMassInverseMatrix2()
+{
+    mMInv2_c.setZero();
+    for (std::vector<BodyNode*>::const_iterator it = mChildBodyNodes.begin();
+         it != mChildBodyNodes.end(); ++it)
+    {
+        mMInv2_c += math::dAdInvT((*it)->getParentJoint()->getLocalTransform(),
+                                  (*it)->mMInv2_b);
+    }
+    assert(!math::isNan(mMInv2_c));
+
+    // Cache data: mMInv2_a
+    int dof = mParentJoint->getNumGenCoords();
+    if (dof > 0)
+    {
+        mMInv2_a = mParentJoint->get_tau();
+        mMInv2_a.noalias() -= mParentJoint->getLocalJacobian().transpose() * mMInv2_c;
+        assert(!math::isNan(mMInv2_a));
+    }
+
+    // Cache data: mMInv2_b
+    mMInv2_b = mMInv2_c;
+    if (dof > 0)
+        mMInv2_b.noalias() += mAI_S * mPsi * mMInv2_a;
+    assert(!math::isNan(mMInv2_b));
+}
+
+void BodyNode::aggregateInvMassMatrix2(Eigen::MatrixXd& _MInvCol, int _col)
+{
+    int dof = mParentJoint->getNumGenCoords();
+    if (dof > 0)
+    {
+        Eigen::VectorXd MInvCol;
+        if (mParentBodyNode)
+        {
+            MInvCol.noalias() =
+                    mPsi * (mMInv2_a - mAI_S.transpose() *
+                            math::AdInvT(mParentJoint->getLocalTransform(),
+                                         mParentBodyNode->mMInv2_U));
+        }
+        else
+        {
+            MInvCol.noalias() = mPsi * mMInv2_a;
+        }
+        assert(!math::isNan(MInvCol));
+
+        // Assign
+        int iStart = mParentJoint->getGenCoord(0)->getSkeletonIndex();
+        _MInvCol.block(iStart, _col, dof, 1) = MInvCol;
+
+        mMInv2_U.noalias() = mParentJoint->getLocalJacobian() * MInvCol;
+    }
+    else
+    {
+        mMInv2_U.setZero();
+    }
+
+    if (mParentBodyNode)
+    {
+        mMInv2_U.noalias() += math::AdInvT(mParentJoint->getLocalTransform(),
+                                           mParentBodyNode->mMInv2_U);
+    }
+    assert(!math::isNan(mMInv2_U));
+}
+
+void BodyNode::_updateBodyJacobian()
+{
+    //--------------------------------------------------------------------------
+    // Jacobian update
+    //
+    // J = | J1 J2 ... Jn |
+    //   = | Ad(T(i,i-1), J_parent) J_local |
+    //
+    //   J_parent: (6 x parentDOF)
+    //    J_local: (6 x localDOF)
+    //         Ji: (6 x 1) se3
+    //          n: number of dependent coordinates
+    //--------------------------------------------------------------------------
+
+    const int localDof     = mParentJoint->getNumGenCoords();
+    const int ascendantDof = getNumDependentGenCoords() - localDof;
+
+    // Parent Jacobian
+    if (mParentBodyNode)
+    {
+        assert(mParentBodyNode->getBodyJacobian().cols() +
+               mParentJoint->getNumGenCoords() == mBodyJacobian.cols());
+
+        for (int i = 0; i < ascendantDof; ++i)
+        {
+            assert(mParentJoint);
+            mBodyJacobian.col(i) =
+                    math::AdInvT(mParentJoint->getLocalTransform(),
+                                 mParentBodyNode->getBodyJacobian().col(i));
+        }
+    }
+
+    // Local Jacobian
+    for(int i = 0; i < localDof; i++)
+    {
+        mBodyJacobian.col(ascendantDof + i) =
+                mParentJoint->getLocalJacobian().col(i);
+    }
+
+    mIsBodyJacobianDirty = false;
 }
 
 void BodyNode::_updateGeralizedInertia()
