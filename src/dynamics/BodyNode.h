@@ -607,6 +607,13 @@ protected:
     Eigen::VectorXd mMInv2_MInvVec;
     Eigen::Vector6d mMInv2_U;
 
+    void aggregateInvMassMatrix3(Eigen::MatrixXd& _MInv);
+
+    Eigen::MatrixXd mMInv3_a;
+    math::Jacobian mMInv3_b;
+    math::Jacobian mMInv3_c;
+    math::Jacobian mMInv3_U;
+
     /// @brief
     void _updateBodyJacobian();
 

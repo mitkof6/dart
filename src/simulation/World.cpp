@@ -106,7 +106,7 @@ void World::setControlInput()
     }
 }
 
-#define USE_FEATHERSTONE 1
+//#define USE_FEATHERSTONE 1
 Eigen::VectorXd World::evalDeriv()
 {
     // compute constraint (contact/contact, joint limit) forces

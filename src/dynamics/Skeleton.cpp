@@ -64,6 +64,7 @@ Skeleton::Skeleton(const std::string& _name)
       mIsMassInvMatrixDirty_OLD(true),
       mIsMassInvMatrixDirty(true),
       mIsMassInvMatrixDirty2(true),
+      mIsMassInvMatrixDirty3(true),
       mIsCoriolisVectorDirty_OLD(true),
       mIsCoriolisVectorDirty(true),
       mIsGravityForceVectorDirty_OLD(true),
@@ -192,6 +193,7 @@ void Skeleton::init(double _timeStep, const Eigen::Vector3d& _gravity)
     mMInv_OLD = Eigen::MatrixXd::Zero(dof, dof);
     mMInv     = Eigen::MatrixXd::Zero(dof, dof);
     mMInv2    = Eigen::MatrixXd::Zero(dof, dof);
+    mMInv3    = Eigen::MatrixXd::Zero(dof, dof);
     mCvec_OLD = Eigen::VectorXd::Zero(dof);
     mCvec     = Eigen::VectorXd::Zero(dof);
     mG_OLD    = Eigen::VectorXd::Zero(dof);
@@ -338,6 +340,7 @@ void Skeleton::setConfig(const Eigen::VectorXd& _config)
     mIsMassMatrixDirty2 = true;
     mIsMassInvMatrixDirty = true;
     mIsMassInvMatrixDirty2 = true;
+    mIsMassInvMatrixDirty3 = true;
     mIsCoriolisVectorDirty = true;
     mIsGravityForceVectorDirty = true;
     mIsCombinedVectorDirty = true;
@@ -377,6 +380,7 @@ void Skeleton::setState(const Eigen::VectorXd& _state)
     mIsMassMatrixDirty2 = true;
     mIsMassInvMatrixDirty = true;
     mIsMassInvMatrixDirty2 = true;
+    mIsMassInvMatrixDirty3 = true;
     mIsCoriolisVectorDirty = true;
     mIsGravityForceVectorDirty = true;
     mIsCombinedVectorDirty = true;
@@ -474,6 +478,14 @@ const Eigen::MatrixXd& Skeleton::getInvMassMatrix2()
         _updateInvMassMatrix2();
 
     return mMInv2;
+}
+
+const Eigen::MatrixXd& Skeleton::getInvMassMatrix3()
+{
+    if (mIsMassInvMatrixDirty3)
+        _updateInvMassMatrix3();
+
+    return mMInv3;
 }
 
 const Eigen::VectorXd& Skeleton::getCoriolisForceVector_OLD()
@@ -637,7 +649,8 @@ void Skeleton::_updateInvMassMatrix_OLD()
 
     // Inverse of mass matrix
     int n = getNumGenCoords();
-    mMInv_OLD = mM_OLD.ldlt().solve(Eigen::MatrixXd::Identity(n,n));
+    //mMInv_OLD = mM_OLD.ldlt().solve(Eigen::MatrixXd::Identity(n,n));
+    mMInv_OLD = mM_OLD.inverse();
 
     mIsMassInvMatrixDirty_OLD = false;
 }
@@ -673,54 +686,54 @@ void Skeleton::_updateInvMassMatrix2()
     assert(getNumGenCoords() > 0);
 
     // TODO: Use symmetry property of the mass inverse.
-//    mMInv2.setZero();
+    mMInv2.setZero();
 
-//    // Backup the origianl internal force
-//    Eigen::VectorXd originalInternalForce = get_tau();
+    // Backup the origianl internal force
+    Eigen::VectorXd originalInternalForce = get_tau();
 
-//    int dof = getNumGenCoords();
-//    Eigen::VectorXd e = Eigen::VectorXd::Zero(dof);
-//    for (int j = 0; j < dof; ++j)
-//    {
-//        e[j] = 1.0;
-//        set_tau(e);
+    int dof = getNumGenCoords();
+    Eigen::VectorXd e = Eigen::VectorXd::Zero(dof);
+    for (int j = 0; j < dof; ++j)
+    {
+        e[j] = 1.0;
+        set_tau(e);
 
-//        // Prepare cache data
-//        for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
-//             it != mBodyNodes.rend(); ++it)
-//        {
-//            (*it)->updateMassInverseMatrix2();
-//        }
+        // Prepare cache data
+        for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
+             it != mBodyNodes.rend(); ++it)
+        {
+            (*it)->updateMassInverseMatrix2();
+        }
 
-//        // Inverse of mass matrix
-//        //    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
-//        //         it != mBodyNodes.end(); ++it)
-//        for (int i = 0; i < mBodyNodes.size(); ++i)
-//        {
-//            mBodyNodes[i]->aggregateInvMassMatrix2(mMInv2, j);
-//            int dof = mBodyNodes[i]->mParentJoint->getNumGenCoords();
-//            int iStart = mBodyNodes[i]->mParentJoint->getGenCoord(0)->getSkeletonIndex();
-//            if (iStart + dof > j)
-//                break;
-//        }
+        // Inverse of mass matrix
+        //    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
+        //         it != mBodyNodes.end(); ++it)
+        for (int i = 0; i < mBodyNodes.size(); ++i)
+        {
+            mBodyNodes[i]->aggregateInvMassMatrix2(mMInv2, j);
+            int dof = mBodyNodes[i]->mParentJoint->getNumGenCoords();
+            int iStart = mBodyNodes[i]->mParentJoint->getGenCoord(0)->getSkeletonIndex();
+            if (iStart + dof > j)
+                break;
+        }
 
-//        e[j] = 0.0;
-//    }
-//    mMInv2.triangularView<Eigen::StrictlyLower>() = mMInv2.transpose();
+        e[j] = 0.0;
+    }
+    mMInv2.triangularView<Eigen::StrictlyLower>() = mMInv2.transpose();
 
-//    // Restore the origianl internal force
-//    set_tau(originalInternalForce);
-
-
+    // Restore the origianl internal force
+    set_tau(originalInternalForce);
 
 
-    // Update mass matrix
-    if (mIsMassMatrixDirty)
-        _updateMassMatrix();
 
-    // Inverse of mass matrix
-    int n = getNumGenCoords();
-    mMInv2 = mM.ldlt().solve(Eigen::MatrixXd::Identity(n,n));
+
+//    // Update mass matrix
+//    if (mIsMassMatrixDirty2)
+//        _updateMassMatrix2();
+
+//    // Inverse of mass matrix
+//    int n = getNumGenCoords();
+//    mMInv2 = mM2.ldlt().solve(Eigen::MatrixXd::Identity(n,n));
 
 
 
@@ -728,6 +741,27 @@ void Skeleton::_updateInvMassMatrix2()
 
 
     mIsMassInvMatrixDirty2 = false;
+}
+
+void Skeleton::_updateInvMassMatrix3()
+{
+    assert(mMInv3.cols() == getNumGenCoords() && mMInv3.rows() == getNumGenCoords());
+    assert(getNumGenCoords() > 0);
+
+    // Calcualtion mass matrix, M
+    mMInv3.setZero();
+//    for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
+//         it != mBodyNodes.rend(); ++it)
+//    {
+//        (*it)->aggregateMassMatrix2(mM2);
+//    }
+    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
+         it != mBodyNodes.end(); ++it)
+    {
+        (*it)->aggregateInvMassMatrix3(mMInv3);
+    }
+
+    mIsMassInvMatrixDirty3 = false;
 }
 
 void Skeleton::_updateCoriolisForceVector_OLD()

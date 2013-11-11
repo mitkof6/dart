@@ -95,7 +95,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
     myWorld->setGravity(Eigen::Vector3d(0.0, 0.0, -9.81));
     myWorld->setTimeStep(0.001);
 
-    double simTime = 0.001;
+    double simTime = 0.000;
     double timeStep = myWorld->getTimeStep();
     int nSteps = simTime / timeStep;
 
@@ -137,7 +137,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
 
             // Mass inverse matrix
             Eigen::MatrixXd MInv_OLD       = skeleton->getInvMassMatrix_OLD();
-            Eigen::MatrixXd MInv           = skeleton->getInvMassMatrix2();
+            Eigen::MatrixXd MInv           = skeleton->getInvMassMatrix3();
             Eigen::MatrixXd I              = Eigen::MatrixXd::Identity(n,n);
             Eigen::MatrixXd M_MInv         = MInv * M;
             Eigen::MatrixXd MInv_M         = M * MInv;
@@ -248,7 +248,7 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
 
             // Mass matrix
             Eigen::MatrixXd M_OLD = skeleton->getMassMatrix_OLD();
-            Eigen::MatrixXd M     = skeleton->getMassMatrix();
+            Eigen::MatrixXd M     = skeleton->getMassMatrix2();
             if (debugPrint && !equals(M_OLD, M))
             {
                 std::cout << "M_OLD: " << M_OLD << std::endl;
@@ -372,41 +372,41 @@ TEST_F(EOM, EquationOfMotionVerification)
     dtdbg << "double_pendulum_ball_joint.skel" << std::endl;
     equationsOfMotionTest(DART_DATA_PATH"/skel/test/double_pendulum_ball_joint.skel");
 
-    dtdbg << "serial_chain_revolute_joint.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_revolute_joint.skel");
+//    dtdbg << "serial_chain_revolute_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_revolute_joint.skel");
 
-    dtdbg << "serial_chain_eulerxyz_joint.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_eulerxyz_joint.skel");
+//    dtdbg << "serial_chain_eulerxyz_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_eulerxyz_joint.skel");
 
-    dtdbg << "serial_chain_ball_joint.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint.skel");
+//    dtdbg << "serial_chain_ball_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint.skel");
 
-    dtdbg << "serial_chain_ball_joint_20.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint_20.skel");
+//    dtdbg << "serial_chain_ball_joint_20.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint_20.skel");
 
-    dtdbg << "serial_chain_ball_joint_40.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint_40.skel");
+//    dtdbg << "serial_chain_ball_joint_40.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/serial_chain_ball_joint_40.skel");
 
     dtdbg << "simple_tree_structure.skel" << std::endl;
     equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure.skel");
 
-    dtdbg << "simple_tree_structure_euler_joint.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_euler_joint.skel");
+//    dtdbg << "simple_tree_structure_euler_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_euler_joint.skel");
 
-    dtdbg << "simple_tree_structure_ball_joint.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_ball_joint.skel");
+//    dtdbg << "simple_tree_structure_ball_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/simple_tree_structure_ball_joint.skel");
 
-    dtdbg << "tree_structure.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure.skel");
+//    dtdbg << "tree_structure.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure.skel");
 
-    dtdbg << "tree_structure_euler_joint.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_euler_joint.skel");
+//    dtdbg << "tree_structure_euler_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_euler_joint.skel");
 
-    dtdbg << "tree_structure_ball_joint.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_ball_joint.skel");
+//    dtdbg << "tree_structure_ball_joint.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/test/tree_structure_ball_joint.skel");
 
-    dtdbg << "fullbody1.skel" << std::endl;
-    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
+//    dtdbg << "fullbody1.skel" << std::endl;
+//    equationsOfMotionTest(DART_DATA_PATH"/skel/fullbody1.skel");
 }
 
 //#ifndef NDEBUG
@@ -414,39 +414,103 @@ TEST_F(EOM, EquationOfMotionPerformance)
 {
     common::Timer timer;
     std::vector<int> dofs;
+
+    // Set 1
+    int numItr = 2000;
     dofs.push_back(1);
     dofs.push_back(2);
-    dofs.push_back(4);
-    dofs.push_back(8);
-    dofs.push_back(16);
-    dofs.push_back(32);
-    dofs.push_back(64);
+    dofs.push_back(5);
+    dofs.push_back(10);
+    dofs.push_back(15);
+    dofs.push_back(20);
+    dofs.push_back(25);
 
+    // Set 2
+//    int numItr = 500;
 //    dofs.push_back(10);
 //    dofs.push_back(20);
+//    dofs.push_back(30);
 //    dofs.push_back(40);
+//    dofs.push_back(50);
+//    dofs.push_back(60);
+//    dofs.push_back(70);
 //    dofs.push_back(80);
-//    dofs.push_back(160);
-//    dofs.push_back(320);
-//    dofs.push_back(640);
+//    dofs.push_back(90);
+//    dofs.push_back(100);
 
-//    dofs.push_back(120);
-//    dofs.push_back(140);
-//    dofs.push_back(160);
-//    dofs.push_back(180);
+    // Set 3
+//    int numItr = 5;
+//    dofs.push_back(100);
 //    dofs.push_back(200);
-//    dofs.push_back(220);
-//    dofs.push_back(240);
-//    dofs.push_back(260);
-//    dofs.push_back(280);
+//    dofs.push_back(300);
+//    dofs.push_back(400);
+//    dofs.push_back(500);
+//    dofs.push_back(600);
+//    dofs.push_back(700);
 
     std::vector<double> oldResult(dofs.size(), 0);
     std::vector<double> newResult(dofs.size(), 0);
     std::vector<double> oldResultWithEOM(dofs.size(), 0);
     std::vector<double> newResultWithEOM(dofs.size(), 0);
 
-    // Number of iteration for each test
-    int numItr = 2000;
+//    for (int i = 0; i < dofs.size(); ++i)
+//    {
+//        simulation::World world;
+//        dynamics::Skeleton* skeleton =
+//                createNLinkRobot(dofs[i], Eigen::Vector3d::Ones(), DOF_X, true);
+//        world.addSkeleton(skeleton);
+
+//        // Random state
+//        Eigen::VectorXd state = skeleton->getState();
+//        for (int k = 0; k < state.size(); ++k)
+//        {
+//            // TODO: The range is [-0.4pi, 0.4pi] until we resolve
+//            //       singular Jacobian issue.
+//            state[k] = math::random(-DART_PI*0.4, DART_PI*0.4);
+//        }
+//        skeleton->setState(state);
+
+//        timer.start();
+//        for (int j = 0; j < numItr; j++)
+//        {
+//            world.step();
+//        }
+//        timer.stop();
+//        newResult[i] = timer.getLastElapsedTime();
+//    }
+
+//    for (int i = 0; i < dofs.size(); ++i)
+//    {
+//        simulation::World world;
+//        dynamics::Skeleton* skeleton =
+//                createNLinkRobot(dofs[i], Eigen::Vector3d::Ones(), DOF_X, true);
+//        world.addSkeleton(skeleton);
+
+//        // Random state
+//        Eigen::VectorXd state = skeleton->getState();
+//        for (int k = 0; k < state.size(); ++k)
+//        {
+//            // TODO: The range is [-0.4pi, 0.4pi] until we resolve
+//            //       singular Jacobian issue.
+//            state[k] = math::random(-DART_PI*0.4, DART_PI*0.4);
+//        }
+//        skeleton->setState(state);
+
+//        timer.start();
+//        for (int j = 0; j < numItr; j++)
+//        {
+//            world.step();
+////            Eigen::MatrixXd M    = skeleton->getMassMatrix2();
+//            Eigen::MatrixXd MInv = skeleton->getInvMassMatrix2();
+////            Eigen::VectorXd Cg   = skeleton->getCombinedVector();
+////            Eigen::VectorXd C    = skeleton->getCoriolisForceVector();
+////            Eigen::VectorXd g    = skeleton->getGravityForceVector();
+////            Eigen::VectorXd Fext = skeleton->getExternalForceVector();
+////            Eigen::MatrixXd J = skeleton->getBodyNode(skeleton->getNumBodyNodes()-1)->getBodyJacobian();
+//        }
+//        timer.stop();
+//        newResultWithEOM[i] = timer.getLastElapsedTime();
+//    }
 
     for (int i = 0; i < dofs.size(); ++i)
     {
@@ -471,7 +535,7 @@ TEST_F(EOM, EquationOfMotionPerformance)
             world.step();
         }
         timer.stop();
-        newResult[i] = timer.getLastElapsedTime();
+        oldResult[i] = timer.getLastElapsedTime();
     }
 
     for (int i = 0; i < dofs.size(); ++i)
@@ -495,76 +559,17 @@ TEST_F(EOM, EquationOfMotionPerformance)
         for (int j = 0; j < numItr; j++)
         {
             world.step();
-//            Eigen::MatrixXd M    = skeleton->getMassMatrix_OLD();
-//            Eigen::MatrixXd MInv = skeleton->getInvMassMatrix_OLD();
-            Eigen::VectorXd Cg   = skeleton->getCombinedVector();
-//            Eigen::VectorXd C    = skeleton->getCoriolisForceVector();
-//            Eigen::VectorXd g    = skeleton->getGravityForceVector();
-//            Eigen::VectorXd Fext = skeleton->getExternalForceVector();
-//            Eigen::MatrixXd J = skeleton->getBodyNode(skeleton->getNumBodyNodes()-1)->getBodyJacobian();
+            Eigen::MatrixXd M_OLD    = skeleton->getMassMatrix_OLD();
+            Eigen::MatrixXd MInv_OLD = skeleton->getInvMassMatrix_OLD();
+            Eigen::VectorXd Cg_OLD   = skeleton->getCombinedVector_OLD();
+            Eigen::VectorXd C_OLD    = skeleton->getCoriolisForceVector_OLD();
+            Eigen::VectorXd g_OLD    = skeleton->getGravityForceVector_OLD();
+            Eigen::VectorXd Fext_OLD = skeleton->getExternalForceVector_OLD();
+            Eigen::MatrixXd J = skeleton->getBodyNode(skeleton->getNumBodyNodes()-1)->getBodyJacobian();
         }
         timer.stop();
-        newResultWithEOM[i] = timer.getLastElapsedTime();
+        oldResultWithEOM[i] = timer.getLastElapsedTime();
     }
-
-//    for (int i = 0; i < dofs.size(); ++i)
-//    {
-//        simulation::World world;
-//        dynamics::Skeleton* skeleton =
-//                createNLinkRobot(dofs[i], Eigen::Vector3d::Ones(), DOF_X, true);
-//        world.addSkeleton(skeleton);
-
-//        // Random state
-//        Eigen::VectorXd state = skeleton->getState();
-//        for (int k = 0; k < state.size(); ++k)
-//        {
-//            // TODO: The range is [-0.4pi, 0.4pi] until we resolve
-//            //       singular Jacobian issue.
-//            state[k] = math::random(-DART_PI*0.4, DART_PI*0.4);
-//        }
-//        skeleton->setState(state);
-
-//        timer.start();
-//        for (int j = 0; j < numItr; j++)
-//        {
-//            world.step();
-//        }
-//        timer.stop();
-//        oldResult[i] = timer.getLastElapsedTime();
-//    }
-
-//    for (int i = 0; i < dofs.size(); ++i)
-//    {
-//        simulation::World world;
-//        dynamics::Skeleton* skeleton =
-//                createNLinkRobot(dofs[i], Eigen::Vector3d::Ones(), DOF_X, true);
-//        world.addSkeleton(skeleton);
-
-//        // Random state
-//        Eigen::VectorXd state = skeleton->getState();
-//        for (int k = 0; k < state.size(); ++k)
-//        {
-//            // TODO: The range is [-0.4pi, 0.4pi] until we resolve
-//            //       singular Jacobian issue.
-//            state[k] = math::random(-DART_PI*0.4, DART_PI*0.4);
-//        }
-//        skeleton->setState(state);
-
-//        timer.start();
-//        for (int j = 0; j < numItr; j++)
-//        {
-//            world.step();
-//            Eigen::MatrixXd M_OLD    = skeleton->getMassMatrix_OLD();
-//            Eigen::MatrixXd MInv_OLD = skeleton->getInvMassMatrix_OLD();
-//            Eigen::VectorXd Cg_OLD   = skeleton->getCombinedVector_OLD();
-//            Eigen::VectorXd C_OLD    = skeleton->getCoriolisForceVector_OLD();
-//            Eigen::VectorXd g_OLD    = skeleton->getGravityForceVector_OLD();
-//            Eigen::VectorXd Fext_OLD = skeleton->getExternalForceVector_OLD();
-//            Eigen::MatrixXd J = skeleton->getBodyNode(skeleton->getNumBodyNodes()-1)->getBodyJacobian();
-//        }
-//        timer.stop();
-//        oldResultWithEOM[i] = timer.getLastElapsedTime();
-//    }
 
     std::cout << "--------------------------------------------------------------" << std::endl;
     std::cout << std::setw(12) << " dof";

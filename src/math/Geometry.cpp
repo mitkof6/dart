@@ -710,14 +710,14 @@ Eigen::Vector6d AdTLinear(const Eigen::Isometry3d& T, const Eigen::Vector3d& v)
     return res;
 }
 
-Jacobian AdT(const Eigen::Isometry3d& T, const Jacobian& J)
+Jacobian AdTJac(const Eigen::Isometry3d& T, const Jacobian& J)
 {
     Jacobian res = Jacobian::Zero(6,J.cols());
-    res.topRows<3>().noalias() = T.linear() * J.topRows<3>();
-    //res.bottomRows<3>() = T.translation().cross(res.topRows<3>().colwise()) +
-    //                      T.linear() * J.bottomRows<3>();
-    res.bottomRows<3>().noalias() = -res.topRows<3>().colwise().cross(T.translation()) +
-                                    T.linear() * J.bottomRows<3>();
+//    res.topRows<3>().noalias() = T.linear() * J.topRows<3>();
+//    res.bottomRows<3>().noalias() = -res.topRows<3>().colwise().cross(T.translation()) +
+//                                    T.linear() * J.bottomRows<3>();
+    for (int i = 0; i < J.cols(); ++i)
+        res.col(i) = AdT(T, J.col(i));
     return res;
 }
 
@@ -760,12 +760,14 @@ Eigen::Vector6d AdInvT(const Eigen::Isometry3d& T, const Eigen::Vector6d& s)
     return res;
 }
 
-Jacobian AdInvT(const Eigen::Isometry3d& T, const Jacobian& J)
+Jacobian AdInvTJac(const Eigen::Isometry3d& T, const Jacobian& J)
 {
     Jacobian res = Jacobian::Zero(6,J.cols());
-    res.topRows<3>().noalias()    = T.linear().transpose() * J.topRows<3>();
-    res.bottomRows<3>().noalias() = T.linear().transpose() *
-            (J.bottomRows<3>() + J.topRows<3>().colwise().cross(T.translation()));
+//    res.topRows<3>().noalias()    = T.linear().transpose() * J.topRows<3>();
+//    res.bottomRows<3>().noalias() = T.linear().transpose() *
+//            (J.bottomRows<3>() + J.topRows<3>().colwise().cross(T.translation()));
+    for (int i = 0; i < J.cols(); ++i)
+        res.col(i) = AdInvT(T, J.col(i));
     return res;
 }
 
@@ -797,7 +799,7 @@ Eigen::Matrix6d AdT(const Eigen::Isometry3d& _T)
     res.topLeftCorner<3,3>()     = _T.linear();
     res.bottomRightCorner<3,3>() = res.topLeftCorner<3,3>();
     res.bottomLeftCorner<3,3>()  =
-            _T.linear().colwise().cross(-_T.translation());
+            res.topLeftCorner<3,3>().colwise().cross(-_T.translation());
     return res;
 }
 
@@ -807,7 +809,7 @@ Eigen::Matrix6d AdInvT(const Eigen::Isometry3d& _T)
     res.topLeftCorner<3,3>()              = _T.linear().transpose();
     res.bottomRightCorner<3,3>()          = res.topLeftCorner<3,3>();
     res.bottomLeftCorner<3,3>().noalias() =
-            res.topLeftCorner<3,3>() * makeSkewSymmetric(-_T.translation());
+            res.topLeftCorner<3,3>().rowwise().cross(-_T.translation());
     return res;
 }
 
@@ -861,12 +863,16 @@ Eigen::Vector6d dAdInvT(const Eigen::Isometry3d& T, const Eigen::Vector6d& t)
     return res;
 }
 
-Jacobian dAdInvT(const Eigen::Isometry3d& T, const Jacobian& J)
+Jacobian dAdInvTJac(const Eigen::Isometry3d& T, const Jacobian& J)
 {
     math::Jacobian res = math::Jacobian::Zero(6, J.cols());
-    res.bottomRows<3>().noalias() = T.linear() * J.bottomRows<3>();
-    res.topRows<3>().noalias()    = T.linear() * J.topRows<3>();
-    res.topRows<3>() -= res.bottomRows<3>().colwise().cross(T.translation());
+//    res.bottomRows<3>().noalias() = T.linear() * J.bottomRows<3>();
+//    res.topRows<3>().noalias()    = T.linear() * J.topRows<3>();
+//    res.topRows<3>() -= res.bottomRows<3>().colwise().cross(T.translation());
+
+    for (int i = 0; i < J.cols(); ++i)
+        res.col(i) = dAdInvT(T, J.col(i));
+
     return res;
 }
 
@@ -897,8 +903,8 @@ Eigen::Matrix6d dAdT(const Eigen::Isometry3d& _T)
     Eigen::Matrix6d res = Eigen::Matrix6d::Zero();
     res.topLeftCorner<3,3>()     = _T.linear().transpose();
     res.bottomRightCorner<3,3>() = res.topLeftCorner<3,3>();
-    res.topRightCorner<3,3>().noalias() =
-            res.topLeftCorner<3,3>() * makeSkewSymmetric(-_T.translation());
+    res.topRightCorner<3,3>() =
+            res.topLeftCorner<3,3>().rowwise().cross(-_T.translation());
     return res;
 }
 
@@ -908,7 +914,7 @@ Eigen::Matrix6d dAdInvT(const Eigen::Isometry3d& _T)
     res.topLeftCorner<3,3>()     = _T.linear();
     res.bottomRightCorner<3,3>() = res.topLeftCorner<3,3>();
     res.topRightCorner<3,3>()  =
-            _T.linear().colwise().cross(-_T.translation());
+            res.topLeftCorner<3,3>().colwise().cross(-_T.translation());
     return res;
 }
 
