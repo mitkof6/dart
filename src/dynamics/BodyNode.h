@@ -576,6 +576,7 @@ protected:
     Eigen::Vector6d mBeta;
 
     math::Inertia mIt;
+    math::Jacobian mIt2;
     std::map<int, math::Inertia> mA;
     math::Jacobian mO;
     math::Inertia mP;
@@ -591,6 +592,11 @@ protected:
 
     /// @brief
     std::vector<Eigen::Vector6d, Eigen::aligned_allocator<Eigen::Vector6d> > mContactForces;
+
+    // Cache data for M
+    math::Jacobian mR;
+    math::Jacobian mL;
+    void aggregateMassMatrix2(Eigen::MatrixXd& _M);
 
     void updateMassInverseMatrix2();
     void aggregateInvMassMatrix2(Eigen::MatrixXd& _MInvCol, int _col);

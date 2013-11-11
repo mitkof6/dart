@@ -204,6 +204,7 @@ Eigen::Vector6d logMap(const Eigen::Isometry3d& T);
 /// @note @f$Ad_TV = ( Rw@,, ~p @times Rw + Rv)@f$,
 /// where @f$T=(R,p)@in SE(3), @quad V=(w,v)@in se(3) @f$.
 Eigen::Vector6d AdT(const Eigen::Isometry3d& T, const Eigen::Vector6d& V);
+Jacobian AdT(const Eigen::Isometry3d& T, const Jacobian& J);
 
 /// @brief Fast version of Ad([R 0; 0 1], V)
 Eigen::Vector6d AdR(const Eigen::Isometry3d& T, const Eigen::Vector6d& V);
@@ -217,14 +218,13 @@ Eigen::Vector6d AdTLinear(const Eigen::Isometry3d& T, const Eigen::Vector3d& v);
 ///// @brief fast version of Ad([I p; 0 1], V)
 //se3 AdP(const Vec3& p, const se3& s);
 
-/// @brief
-Jacobian AdTJac(const Eigen::Isometry3d& T, const Jacobian& J);
 
 ///// @brief fast version of Ad([R 0; 0 1], J)
 //Jacobian AdRJac(const SE3& T, const Jacobian& J);
 
 /// @brief fast version of Ad(Inv(T), V)
 Eigen::Vector6d AdInvT(const Eigen::Isometry3d& T, const Eigen::Vector6d& V);
+Jacobian AdInvT(const Eigen::Isometry3d& T, const Jacobian& J);
 
 ///// @brief fast version of Ad(Inv(T), se3(Eigen_Vec3(0), v))
 //Eigen::Vector3d AdInvTLinear(const Eigen::Isometry3d& T, const Eigen::Vector3d& v);
@@ -241,6 +241,7 @@ Eigen::Vector6d AdInvRLinear(const Eigen::Isometry3d& T,
 
 /// @brief
 Eigen::Matrix6d AdT(const Eigen::Isometry3d& _T);
+Eigen::Matrix6d AdInvT(const Eigen::Isometry3d& _T);
 
 /// @brief dual adjoint mapping
 /// @note @f$Ad^{@,*}_TF = ( R^T (m - p@times f)@,,~ R^T f)@f$,
@@ -252,12 +253,14 @@ Eigen::Vector6d dAdT(const Eigen::Isometry3d& T, const Eigen::Vector6d& F);
 
 /// @brief fast version of dAd(Inv(T), F)
 Eigen::Vector6d dAdInvT(const Eigen::Isometry3d& T, const Eigen::Vector6d& F);
+Jacobian dAdInvT(const Eigen::Isometry3d& T, const Jacobian& J);
 
 /// @brief fast version of dAd(Inv([R 0; 0 1]), F)
 Eigen::Vector6d dAdInvR(const Eigen::Isometry3d& T, const Eigen::Vector6d& F);
 
 /// @brief
 Eigen::Matrix6d dAdT(const Eigen::Isometry3d& _T);
+Eigen::Matrix6d dAdInvT(const Eigen::Isometry3d& _T);
 
 ///// @brief fast version of dAd(Inv(SE3(p)), dse3(Eigen_Vec3(0), F))
 //dse3 dAdInvPLinear(const Vec3& p, const Vec3& F);

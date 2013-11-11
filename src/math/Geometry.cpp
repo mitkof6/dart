@@ -669,8 +669,8 @@ Eigen::Vector6d AdT(const Eigen::Isometry3d& T, const Eigen::Vector6d& s)
     // v' = p x R*w + R*v
     //--------------------------------------------------------------------------
     Eigen::Vector6d res;
-    res.head<3>() = T.linear() * s.head<3>();
-    res.tail<3>() = T.linear() * s.tail<3>() +
+    res.head<3>().noalias() = T.linear() * s.head<3>();
+    res.tail<3>().noalias() = T.linear() * s.tail<3>() +
                     T.translation().cross(res.head<3>());
     return res;
 }
@@ -682,8 +682,8 @@ Eigen::Vector6d AdR(const Eigen::Isometry3d& T, const Eigen::Vector6d& s)
     // v' = R*v
     //--------------------------------------------------------------------------
     Eigen::Vector6d res;
-    res.head<3>() = T.linear() * s.head<3>();
-    res.tail<3>() = T.linear() * s.tail<3>();
+    res.head<3>().noalias() = T.linear() * s.head<3>();
+    res.tail<3>().noalias() = T.linear() * s.tail<3>();
     return res;
 }
 
@@ -694,7 +694,7 @@ Eigen::Vector6d AdTAngular(const Eigen::Isometry3d& T, const Eigen::Vector3d& s)
     // v' = p x R*w
     //--------------------------------------------------------------------------
     Eigen::Vector6d res;
-    res.head<3>() = T.linear() * s;
+    res.head<3>().noalias() = T.linear() * s;
     res.tail<3>() = T.translation().cross(res.head<3>());
     return res;
 }
@@ -706,18 +706,18 @@ Eigen::Vector6d AdTLinear(const Eigen::Isometry3d& T, const Eigen::Vector3d& v)
     // v' = R*v
     //--------------------------------------------------------------------------
     Eigen::Vector6d res = Eigen::Vector6d::Zero();
-    res.tail<3>() = T.linear() * v;
+    res.tail<3>().noalias() = T.linear() * v;
     return res;
 }
 
-Jacobian AdTJac(const Eigen::Isometry3d& T, const Jacobian& J)
+Jacobian AdT(const Eigen::Isometry3d& T, const Jacobian& J)
 {
     Jacobian res = Jacobian::Zero(6,J.cols());
-    res.topRows<3>() = T.linear() * J.topRows<3>();
+    res.topRows<3>().noalias() = T.linear() * J.topRows<3>();
     //res.bottomRows<3>() = T.translation().cross(res.topRows<3>().colwise()) +
     //                      T.linear() * J.bottomRows<3>();
-    res.bottomRows<3>() = -res.topRows<3>().colwise().cross(T.translation()) +
-                          T.linear() * J.bottomRows<3>();
+    res.bottomRows<3>().noalias() = -res.topRows<3>().colwise().cross(T.translation()) +
+                                    T.linear() * J.bottomRows<3>();
     return res;
 }
 
@@ -754,9 +754,18 @@ Jacobian AdTJac(const Eigen::Isometry3d& T, const Jacobian& J)
 Eigen::Vector6d AdInvT(const Eigen::Isometry3d& T, const Eigen::Vector6d& s)
 {
     Eigen::Vector6d res;
-    res.head<3>() = T.linear().transpose() * s.head<3>();
-    res.tail<3>() = T.linear().transpose() *
-                    (s.tail<3>() + s.head<3>().cross(T.translation()));
+    res.head<3>().noalias() = T.linear().transpose() * s.head<3>();
+    res.tail<3>().noalias() = T.linear().transpose() *
+                              (s.tail<3>() + s.head<3>().cross(T.translation()));
+    return res;
+}
+
+Jacobian AdInvT(const Eigen::Isometry3d& T, const Jacobian& J)
+{
+    Jacobian res = Jacobian::Zero(6,J.cols());
+    res.topRows<3>().noalias()    = T.linear().transpose() * J.topRows<3>();
+    res.bottomRows<3>().noalias() = T.linear().transpose() *
+            (J.bottomRows<3>() + J.topRows<3>().colwise().cross(T.translation()));
     return res;
 }
 
@@ -778,19 +787,27 @@ Eigen::Vector6d AdInvRLinear(const Eigen::Isometry3d& T,
                              const Eigen::Vector3d& v)
 {
     Eigen::Vector6d res = Eigen::Vector6d::Zero();
-    res.tail<3>() = T.linear().transpose() * v;
+    res.tail<3>().noalias() = T.linear().transpose() * v;
     return res;
 }
 
 Eigen::Matrix6d AdT(const Eigen::Isometry3d& _T)
 {
     Eigen::Matrix6d res = Eigen::Matrix6d::Zero();
-
     res.topLeftCorner<3,3>()     = _T.linear();
-    res.bottomRightCorner<3,3>() = _T.linear();
-    res.bottomLeftCorner<3,3>()  = makeSkewSymmetric(_T.translation()) *
-                                   _T.linear();
+    res.bottomRightCorner<3,3>() = res.topLeftCorner<3,3>();
+    res.bottomLeftCorner<3,3>()  =
+            _T.linear().colwise().cross(-_T.translation());
+    return res;
+}
 
+Eigen::Matrix6d AdInvT(const Eigen::Isometry3d& _T)
+{
+    Eigen::Matrix6d res = Eigen::Matrix6d::Zero();
+    res.topLeftCorner<3,3>()              = _T.linear().transpose();
+    res.bottomRightCorner<3,3>()          = res.topLeftCorner<3,3>();
+    res.bottomLeftCorner<3,3>().noalias() =
+            res.topLeftCorner<3,3>() * makeSkewSymmetric(-_T.translation());
     return res;
 }
 
@@ -813,9 +830,9 @@ Eigen::Vector6d ad(const Eigen::Vector6d& s1, const Eigen::Vector6d& s2)
 Eigen::Vector6d dAdT(const Eigen::Isometry3d& T, const Eigen::Vector6d& t)
 {
     Eigen::Vector6d res;
-    res.head<3>() = T.linear().transpose() *
+    res.head<3>().noalias() = T.linear().transpose() *
                     (t.head<3>() + t.tail<3>().cross(T.translation()));
-    res.tail<3>() = T.linear().transpose() * t.tail<3>();
+    res.tail<3>().noalias() = T.linear().transpose() * t.tail<3>();
     return res;
 }
 
@@ -838,17 +855,26 @@ Eigen::Vector6d dAdT(const Eigen::Isometry3d& T, const Eigen::Vector6d& t)
 Eigen::Vector6d dAdInvT(const Eigen::Isometry3d& T, const Eigen::Vector6d& t)
 {
     Eigen::Vector6d res;
-    res.tail<3>() = T.linear() * t.tail<3>();
-    res.head<3>() = T.linear() * t.head<3>() +
-                    T.translation().cross(res.tail<3>());
+    res.tail<3>().noalias() = T.linear() * t.tail<3>();
+    res.head<3>().noalias() = T.linear() * t.head<3>();
+    res.head<3>() += T.translation().cross(res.tail<3>());
+    return res;
+}
+
+Jacobian dAdInvT(const Eigen::Isometry3d& T, const Jacobian& J)
+{
+    math::Jacobian res = math::Jacobian::Zero(6, J.cols());
+    res.bottomRows<3>().noalias() = T.linear() * J.bottomRows<3>();
+    res.topRows<3>().noalias()    = T.linear() * J.topRows<3>();
+    res.topRows<3>() -= res.bottomRows<3>().colwise().cross(T.translation());
     return res;
 }
 
 Eigen::Vector6d dAdInvR(const Eigen::Isometry3d& T, const Eigen::Vector6d& t)
 {
     Eigen::Vector6d res;
-    res.head<3>() = T.linear() * t.head<3>();
-    res.tail<3>() = T.linear() * t.tail<3>();
+    res.head<3>().noalias() = T.linear() * t.head<3>();
+    res.tail<3>().noalias() = T.linear() * t.tail<3>();
     return res;
 }
 
@@ -869,12 +895,20 @@ Eigen::Vector6d dAdInvR(const Eigen::Isometry3d& T, const Eigen::Vector6d& t)
 Eigen::Matrix6d dAdT(const Eigen::Isometry3d& _T)
 {
     Eigen::Matrix6d res = Eigen::Matrix6d::Zero();
-
     res.topLeftCorner<3,3>()     = _T.linear().transpose();
     res.bottomRightCorner<3,3>() = res.topLeftCorner<3,3>();
-    res.topRightCorner<3,3>()     = res.topLeftCorner<3,3>() *
-                                   makeSkewSymmetric(-_T.translation());
+    res.topRightCorner<3,3>().noalias() =
+            res.topLeftCorner<3,3>() * makeSkewSymmetric(-_T.translation());
+    return res;
+}
 
+Eigen::Matrix6d dAdInvT(const Eigen::Isometry3d& _T)
+{
+    Eigen::Matrix6d res = Eigen::Matrix6d::Zero();
+    res.topLeftCorner<3,3>()     = _T.linear();
+    res.bottomRightCorner<3,3>() = res.topLeftCorner<3,3>();
+    res.topRightCorner<3,3>()  =
+            _T.linear().colwise().cross(-_T.translation());
     return res;
 }
 

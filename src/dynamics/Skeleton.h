@@ -177,6 +177,7 @@ public:
     /// @brief Get mass matrix of the skeleton.
     const Eigen::MatrixXd& getMassMatrix_OLD();
     const Eigen::MatrixXd& getMassMatrix();
+    const Eigen::MatrixXd& getMassMatrix2();
 
     /// @brief Get inverse of mass matrix of the skeleton.
     const Eigen::MatrixXd& getInvMassMatrix_OLD();
@@ -297,10 +298,12 @@ protected:
     /// @brief Mass matrix for the skeleton.
     Eigen::MatrixXd mM_OLD;
     Eigen::MatrixXd mM;
+    Eigen::MatrixXd mM2;
 
     /// @brief Dirty flag for the mass matrix.
     bool mIsMassMatrixDirty_OLD;
     bool mIsMassMatrixDirty;
+    bool mIsMassMatrixDirty2;
 
     /// @brief Inverse of mass matrix for the skeleton.
     Eigen::MatrixXd mMInv_OLD;
@@ -358,6 +361,7 @@ private:
     /// @brief Update mass matrix of the skeleton.
     void _updateMassMatrix_OLD();
     void _updateMassMatrix();
+    void _updateMassMatrix2();
 
     /// @brief Update inverse of mass matrix of the skeleton.
     void _updateInvMassMatrix_OLD();
