@@ -558,6 +558,9 @@ protected:
     /// @brief
     math::Jacobian mAI_S;
 
+    /// @brief
+    math::Jacobian mAI_S_Psi;
+
 public:
     /// @brief
     Eigen::MatrixXd mPsi;
@@ -593,6 +596,11 @@ protected:
     /// @brief
     std::vector<Eigen::Vector6d, Eigen::aligned_allocator<Eigen::Vector6d> > mContactForces;
 
+    void updateMassMatrix3();
+    void aggregateMassMatrix3(Eigen::MatrixXd& _MCol, int _col);
+    Eigen::Vector6d mM3_dV;
+    Eigen::Vector6d mM3_F;
+
     // Cache data for M
     math::Jacobian mR;
     math::Jacobian mL;
@@ -609,6 +617,7 @@ protected:
 
     void aggregateInvMassMatrix3(Eigen::MatrixXd& _MInv);
 
+    bool mMInv3_isExcited;
     Eigen::MatrixXd mMInv3_a;
     math::Jacobian mMInv3_b;
     math::Jacobian mMInv3_c;

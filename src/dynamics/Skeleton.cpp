@@ -61,6 +61,7 @@ Skeleton::Skeleton(const std::string& _name)
       mIsMassMatrixDirty_OLD(true),
       mIsMassMatrixDirty(true),
       mIsMassMatrixDirty2(true),
+      mIsMassMatrixDirty3(true),
       mIsMassInvMatrixDirty_OLD(true),
       mIsMassInvMatrixDirty(true),
       mIsMassInvMatrixDirty2(true),
@@ -190,6 +191,7 @@ void Skeleton::init(double _timeStep, const Eigen::Vector3d& _gravity)
     mM_OLD    = Eigen::MatrixXd::Zero(dof, dof);
     mM        = Eigen::MatrixXd::Zero(dof, dof);
     mM2       = Eigen::MatrixXd::Zero(dof, dof);
+    mM3       = Eigen::MatrixXd::Zero(dof, dof);
     mMInv_OLD = Eigen::MatrixXd::Zero(dof, dof);
     mMInv     = Eigen::MatrixXd::Zero(dof, dof);
     mMInv2    = Eigen::MatrixXd::Zero(dof, dof);
@@ -338,6 +340,7 @@ void Skeleton::setConfig(const Eigen::VectorXd& _config)
 
     mIsMassMatrixDirty = true;
     mIsMassMatrixDirty2 = true;
+    mIsMassMatrixDirty3 = true;
     mIsMassInvMatrixDirty = true;
     mIsMassInvMatrixDirty2 = true;
     mIsMassInvMatrixDirty3 = true;
@@ -378,6 +381,7 @@ void Skeleton::setState(const Eigen::VectorXd& _state)
 
     mIsMassMatrixDirty = true;
     mIsMassMatrixDirty2 = true;
+    mIsMassMatrixDirty3 = true;
     mIsMassInvMatrixDirty = true;
     mIsMassInvMatrixDirty2 = true;
     mIsMassInvMatrixDirty3 = true;
@@ -448,12 +452,20 @@ const Eigen::MatrixXd& Skeleton::getMassMatrix()
     return mM;
 }
 
-const Eigen::MatrixXd&Skeleton::getMassMatrix2()
+const Eigen::MatrixXd& Skeleton::getMassMatrix2()
 {
     if (mIsMassMatrixDirty2)
         _updateMassMatrix2();
 
     return mM2;
+}
+
+const Eigen::MatrixXd& Skeleton::getMassMatrix3()
+{
+    if (mIsMassMatrixDirty3)
+        _updateMassMatrix3();
+
+    return mM3;
 }
 
 const Eigen::MatrixXd& Skeleton::getInvMassMatrix_OLD()
@@ -637,6 +649,52 @@ void Skeleton::_updateMassMatrix2()
     mIsMassMatrixDirty2 = false;
 }
 
+void Skeleton::_updateMassMatrix3()
+{
+    assert(mM3.cols() == getNumGenCoords() && mM3.rows() == getNumGenCoords());
+    assert(getNumGenCoords() > 0);
+
+    mM3.setZero();
+
+    // Backup the origianl internal force
+    Eigen::VectorXd originalGenAcceleration = get_ddq();
+
+    int dof = getNumGenCoords();
+    Eigen::VectorXd e = Eigen::VectorXd::Zero(dof);
+    for (int j = 0; j < dof; ++j)
+    {
+        e[j] = 1.0;
+        set_ddq(e);
+
+        // Prepare cache data
+        for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
+             it != mBodyNodes.rend(); ++it)
+        {
+            (*it)->updateMassMatrix3();
+        }
+
+        // Mass matrix
+        //    for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
+        //         it != mBodyNodes.end(); ++it)
+        for (int i = 0; i < mBodyNodes.size(); ++i)
+        {
+            mBodyNodes[i]->aggregateMassMatrix3(mM3, j);
+            int dof = mBodyNodes[i]->mParentJoint->getNumGenCoords();
+            int iStart = mBodyNodes[i]->mParentJoint->getGenCoord(0)->getSkeletonIndex();
+            if (iStart + dof > j)
+                break;
+        }
+
+        e[j] = 0.0;
+    }
+    mM3.triangularView<Eigen::StrictlyLower>() = mM3.transpose();
+
+    // Restore the origianl internal force
+    set_ddq(originalGenAcceleration);
+
+    mIsMassMatrixDirty3 = false;
+}
+
 void Skeleton::_updateInvMassMatrix_OLD()
 {
     assert(mMInv_OLD.cols() == getNumGenCoords() &&
@@ -686,7 +744,7 @@ void Skeleton::_updateInvMassMatrix2()
     assert(getNumGenCoords() > 0);
 
     // TODO: Use symmetry property of the mass inverse.
-    mMInv2.setZero();
+//    mMInv2.setZero();
 
     // Backup the origianl internal force
     Eigen::VectorXd originalInternalForce = get_tau();
@@ -749,12 +807,7 @@ void Skeleton::_updateInvMassMatrix3()
     assert(getNumGenCoords() > 0);
 
     // Calcualtion mass matrix, M
-    mMInv3.setZero();
-//    for (std::vector<BodyNode*>::reverse_iterator it = mBodyNodes.rbegin();
-//         it != mBodyNodes.rend(); ++it)
-//    {
-//        (*it)->aggregateMassMatrix2(mM2);
-//    }
+//    mMInv3.setZero();
     for (std::vector<BodyNode*>::iterator it = mBodyNodes.begin();
          it != mBodyNodes.end(); ++it)
     {
