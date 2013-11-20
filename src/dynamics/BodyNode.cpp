@@ -254,7 +254,7 @@ math::Jacobian BodyNode::getWorldJacobian(const Eigen::Vector3d& _offset)
 {
     Eigen::Isometry3d T = mW;
     T.translation() = -_offset;
-    return math::AdT(T, getBodyJacobian());
+    return math::AdTJac(T, getBodyJacobian());
 }
 
 const math::Jacobian& BodyNode::getBodyJacobianTimeDeriv() const
@@ -267,7 +267,7 @@ math::Jacobian BodyNode::getWorldJacobianTimeDeriv(
 {
     Eigen::Isometry3d T = mW;
     T.translation() = -_offset;
-    return math::AdT(T, mBodyJacobianTimeDeriv);
+    return math::AdTJac(T, mBodyJacobianTimeDeriv);
 }
 
 void BodyNode::setColliding(bool _isColliding)
