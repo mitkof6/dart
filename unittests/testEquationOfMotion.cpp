@@ -251,8 +251,8 @@ void EOM::equationsOfMotionTest(const std::string& _fileName)
             Eigen::MatrixXd M     = skeleton->getMassMatrix2();
             if (debugPrint && !equals(M_OLD, M))
             {
-                std::cout << "M_OLD: " << M_OLD << std::endl;
-                std::cout << "M    : " << M << std::endl;
+                std::cout << "M_OLD: \n" << M_OLD << std::endl;
+                std::cout << "M    : \n" << M << std::endl;
             }
             EXPECT_TRUE(equals(M_OLD, M));
 
