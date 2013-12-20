@@ -582,6 +582,27 @@
                 <parent>h_pelvis</parent>
                 <child>h_thigh_left</child>
                 <axis_order>zyx</axis_order>
+                <axis>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis>
+                <axis2>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis2>
+                <axis3>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis3>
                 <init_pos>0 0 0</init_pos>
                 <init_vel>0 0 0</init_vel>
             </joint>
@@ -592,6 +613,11 @@
                 <child>h_shin_left</child>
                 <axis>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>0.0</upper>
+                    </limit>
                 </axis>
                 <init_pos>-0.17</init_pos>
                 <init_vel>0</init_vel>
@@ -603,9 +629,19 @@
                 <child>h_heel_left</child>
                 <axis>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.5236</lower>
+                        <upper>0.5236</upper>
+                    </limit>
                 </axis>
                 <axis2>
                     <xyz>0.0 1.0 0.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.7854</lower>
+                        <upper>0.7854</upper>
+                    </limit>
                 </axis2>
                 <init_pos>0 0</init_pos>
                 <init_vel>0 0</init_vel>
@@ -617,6 +653,11 @@
                 <child>h_toe_left</child>
                 <axis>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.5236</lower>
+                        <upper>0.5236</upper>
+                    </limit>
                 </axis>
                 <init_pos>0</init_pos>
                 <init_vel>0</init_vel>
@@ -628,6 +669,27 @@
                 <parent>h_pelvis</parent>
                 <child>h_thigh_right</child>
                 <axis_order>zyx</axis_order>
+                <axis>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis>
+                <axis2>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis2>
+                <axis3>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis3>
                 <init_pos>0 0 0</init_pos>
                 <init_vel>0 0 0</init_vel>
             </joint>
@@ -638,6 +700,11 @@
                 <child>h_shin_right</child>
                 <axis>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>0.0</upper>
+                    </limit>
                 </axis>
                 <init_pos>-0.17</init_pos>
                 <init_vel>0</init_vel>
@@ -649,9 +716,19 @@
                 <child>h_heel_right</child>
                 <axis>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.5236</lower>
+                        <upper>0.5236</upper>
+                    </limit>
                 </axis>
                 <axis2>
                     <xyz>0.0 1.0 0.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.7854</lower>
+                        <upper>0.7854</upper>
+                    </limit>
                 </axis2>
                 <init_pos>0 0</init_pos>
                 <init_vel>0 0</init_vel>
@@ -663,6 +740,11 @@
                 <child>h_toe_right</child>
                 <axis>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.5236</lower>
+                        <upper>0.5236</upper>
+                    </limit>
                 </axis>
                 <init_pos>0</init_pos>
                 <init_vel>0</init_vel>
@@ -675,9 +757,19 @@
                 <child>h_abdomen</child>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.5</lower>
+                        <upper>0.5</upper>
+                    </limit>
                 </axis>
                 <axis2>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.5</lower>
+                        <upper>0.5</upper>
+                    </limit>
                 </axis2>
                 <init_pos>0 0</init_pos>
                 <init_vel>0 0</init_vel>
@@ -689,6 +781,11 @@
                 <child>h_spine</child>
                 <axis>
                     <xyz>0.0 1.0 0.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-1.0</lower>
+                        <upper>1.0</upper>
+                    </limit>
                 </axis>
                 <init_pos>0</init_pos>
                 <init_vel>0</init_vel>
@@ -700,9 +797,19 @@
                 <child>h_head</child>
                 <axis>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-1.0472</lower>
+                        <upper>1.0472</upper>
+                    </limit>
                 </axis>
                 <axis2>
                     <xyz>1.0 0.0 0.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-1.0472</lower>
+                        <upper>1.0472</upper>
+                    </limit>
                 </axis2>
                 <init_pos>0 0</init_pos>
                 <init_vel>0 0</init_vel>
@@ -715,6 +822,11 @@
                 <child>h_scapula_left</child>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.2491</lower>
+                        <upper>0.2491</upper>
+                    </limit>
                 </axis>
                 <init_pos>-0.14</init_pos>
                 <init_vel>0</init_vel>
@@ -725,6 +837,27 @@
                 <parent>h_scapula_left</parent>
                 <child>h_bicep_left</child>
                 <axis_order>zyx</axis_order>
+                <axis>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis>
+                <axis2>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis2>
+                <axis3>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis3>
                 <init_pos>0 0 0</init_pos>
                 <init_vel>0 0 0</init_vel>
             </joint>
@@ -735,6 +868,11 @@
                 <child>h_forearm_left</child>
                 <axis>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.0</lower>
+                        <upper>3.1416</upper>
+                    </limit>
                 </axis>
                 <init_pos>0.7</init_pos>
                 <init_vel>0</init_vel>
@@ -746,6 +884,11 @@
                 <child>h_hand_left</child>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-1.5708</lower>
+                        <upper>1.5708</upper>
+                    </limit>
                 </axis>
                 <init_pos>0</init_pos>
                 <init_vel>0</init_vel>
@@ -758,6 +901,11 @@
                 <child>h_scapula_right</child>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.2491</lower>
+                        <upper>0.2491</upper>
+                    </limit>
                 </axis>
                 <init_pos>0.14</init_pos>
                 <init_vel>0</init_vel>
@@ -768,6 +916,27 @@
                 <parent>h_scapula_right</parent>
                 <child>h_bicep_right</child>
                 <axis_order>zyx</axis_order>
+                <axis>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis>
+                <axis2>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis2>
+                <axis3>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-3.1416</lower>
+                        <upper>3.1416</upper>
+                    </limit>
+                </axis3>
                 <init_pos>0 0 0</init_pos>
                 <init_vel>0 0 0</init_vel>
             </joint>
@@ -778,6 +947,11 @@
                 <child>h_forearm_right</child>
                 <axis>
                     <xyz>0.0 0.0 1.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-0.0</lower>
+                        <upper>3.1416</upper>
+                    </limit>
                 </axis>
                 <init_pos>0.7</init_pos>
                 <init_vel>0</init_vel>
@@ -789,6 +963,11 @@
                 <child>h_hand_right</child>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
+                    <damping>0.1</damping>
+                    <limit>
+                        <lower>-1.5708</lower>
+                        <upper>1.5708</upper>
+                    </limit>
                 </axis>
                 <init_pos>0</init_pos>
                 <init_vel>0</init_vel>
