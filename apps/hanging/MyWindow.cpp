@@ -188,7 +188,7 @@ void MyWindow::keyboard(unsigned char key, int x, int y)
       std::cout << "push forward" << std::endl;
       break;
     case '2':
-      mForce[0] = -20;
+      mForce[0] = -10;
       mImpulseDuration = 10.0;
       std::cout << "push backward" << std::endl;
       break;

@@ -46,7 +46,8 @@
 
 Controller::Controller(dart::dynamics::Skeleton* _skel,
                        dart::constraint::ConstraintDynamics* _constraintHandle,
-                       double _t) {
+                       double _t)
+{
   mSkel = _skel;
   mConstraintHandle = _constraintHandle;
   mTimestep = _t;
@@ -70,23 +71,31 @@ Controller::Controller(dart::dynamics::Skeleton* _skel,
     mKp(i, i) = 0.0;
     mKd(i, i) = 0.0;
   }
-  for (int i = 6; i < 22; i++)
-    mKp(i, i) = 200.0; // lower body + lower back
-  for (int i = 22; i < nDof; i++)
+  for (int i = 6; i < 12; i++)
+    mKp(i, i) = 200.0;
+  for (int i = 12; i < 13; i++)
     mKp(i, i) = 20.0;
-  for (int i = 6; i < 22; i++)
-    mKd(i, i) = 100.0;
-  for (int i = 22; i < nDof; i++)
-    mKd(i, i) = 10.0;
+  for (int i = 13; i < 19; i++)
+    mKp(i, i) = 200.0;
+  for (int i = 19; i < 20; i++)
+    mKp(i, i) = 20.0;
+  for (int i = 20; i < 24; i++)
+    mKp(i, i) = 200.0;
+  for (int i = 24; i < nDof; i++)
+    mKp(i, i) = 20.0;
 
-//  for (int i = 6; i < 22; i++)
-//    mKp(i, i) = 2.0; // lower body + lower back
-//  for (int i = 22; i < nDof; i++)
-//    mKp(i, i) = 2.0;
-//  for (int i = 6; i < 22; i++)
-//    mKd(i, i) = 2.0;
-//  for (int i = 22; i < nDof; i++)
-//    mKd(i, i) = 2.0;
+  for (int i = 6; i < 12; i++)
+    mKd(i, i) = 100.0;
+  for (int i = 12; i < 13; i++)
+    mKd(i, i) = 10.0;
+  for (int i = 13; i < 19; i++)
+    mKd(i, i) = 100.0;
+  for (int i = 19; i < 20; i++)
+    mKd(i, i) = 10.0;
+  for (int i = 20; i < 24; i++)
+    mKd(i, i) = 100.0;
+  for (int i = 24; i < nDof; i++)
+    mKd(i, i) = 10.0;
 
   mPreOffset = 0.0;
 }
