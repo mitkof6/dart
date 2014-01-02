@@ -45,10 +45,12 @@
 namespace dart {
 namespace lcpsolver {
 
-LCPSolver::LCPSolver() {
+LCPSolver::LCPSolver()
+{
 }
 
-LCPSolver::~LCPSolver() {
+LCPSolver::~LCPSolver()
+{
 }
 
 bool LCPSolver::Solve(const Eigen::MatrixXd& _A,
@@ -57,48 +59,58 @@ bool LCPSolver::Solve(const Eigen::MatrixXd& _A,
                       int _numContacts,
                       double _mu,
                       int _numDir,
-                      bool _bUseODESolver) {
-  if (!_bUseODESolver) {
+                      bool _bUseODESolver)
+{
+  if (!_bUseODESolver)
+  {
     int err = Lemke(_A, _b, _x);
     return (err == 0);
-  } else {
+  }
+  else
+  {
     assert(_numDir >= 4);
-    double* A, *b, *x, *w, *lo, *hi;
-    int n = _A.rows();
 
+    int n = _A.rows();    // A is square matrix
     int nSkip = dPAD(n);
 
-    A = new double[n * nSkip];
-    b = new double[n];
-    x = new double[n];
-    w = new double[n];
-    lo = new double[n];
-    hi = new double[n];
-    int* findex = new int[n];
+    // Allocate intermediate variable for ODE
+    double* A      = new double[n * nSkip];
+    double* b      = new double[n];
+    double* x      = new double[n];
+    double* w      = new double[n]();  // initialize as 0
+    double* lo     = new double[n]();  // initialize as 0
+    double* hi     = new double[n];
+    int*    findex = new int[n];
 
-    memset(A, 0, n * nSkip * sizeof(double));
-    for (int i = 0; i < n; ++i) {
-      for (int j = 0; j < n; ++j) {
+    // Fill values of A, b, w, lo, hi, and findex for normal contact forces
+    for (int i = 0; i < n; ++i)
+    {
+      for (int j = 0; j < n; ++j)
         A[i * nSkip + j] = _A(i, j);
-      }
-    }
-    for (int i = 0; i < n; ++i) {
       b[i] = -_b[i];
-      x[i] = w[i] = lo[i] = 0;
       hi[i] = dInfinity;
       findex[i] = -1;
     }
-    for (int i = 0; i < _numContacts; ++i) {
-      findex[_numContacts + i * 2 + 0] = i;
-      findex[_numContacts + i * 2 + 1] = i;
 
-      lo[_numContacts + i * 2 + 0] = -_mu;
-      lo[_numContacts + i * 2 + 1] = -_mu;
+    // Fill values of findex, lo, hi for directional contact forces
+    for (int i = 0; i < _numContacts; ++i)
+    {
+      int idx0 = _numContacts + i * 2;
+      int idx1 = idx0 + 1;
 
-      hi[_numContacts + i * 2 + 0] = _mu;
-      hi[_numContacts + i * 2 + 1] = _mu;
+      findex[idx0] = i;
+      findex[idx1] = i;
+
+      lo[idx0] = -_mu;
+      lo[idx1] = -_mu;
+
+      hi[idx0] = _mu;
+      hi[idx1] = _mu;
     }
-    // dClearUpperTriangle (A,n);
+
+    // dClearUpperTriangle(A,n);
+
+    // Solve LCP
     dSolveLCP(n, A, x, b, w, 0, lo, hi, findex);
 
 //    for (int i = 0; i < n; i++) {
@@ -111,13 +123,16 @@ bool LCPSolver::Solve(const Eigen::MatrixXd& _A,
 //        cout << "w[i] " << i << " is zero, but x is " << x[i] << endl;
 //    }
 
-    *_x = Eigen::VectorXd(n);
-    for (int i = 0; i < n; ++i) {
+    // Resize _x to n
+    _x->setZero(n);
+
+    // Assign the result of lcp into _x
+    for (int i = 0; i < n; ++i)
       (*_x)[i] = x[i];
-    }
 
     // checkIfSolution(reducedA, reducedb, _x);
 
+    // Release intermediate variables for ODE
     delete[] A;
     delete[] b;
     delete[] x;
@@ -125,6 +140,7 @@ bool LCPSolver::Solve(const Eigen::MatrixXd& _A,
     delete[] lo;
     delete[] hi;
     delete[] findex;
+
     return 1;
   }
 }
