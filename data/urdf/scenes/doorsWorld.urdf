@@ -1,0 +1,47 @@
+<world name="cubesWorld">
+  <!-- include the models here by referenceing their URDFs -->
+  <include filename="doorWall.urdf" model_name="doorAndWall"/>
+  <include filename="wall.urdf" model_name="wall"/>
+  <include filename="blueCubeObject.urdf" model_name="blueCube"/>
+  <include filename="redCubeObject.urdf" model_name="redCube"/>
+  <include filename="cartObject.urdf" model_name="cart"/>
+  <include filename="glassDiningTable2.urdf" model_name="glassDiningTable2"/>
+  <include filename="boardObject.urdf" model_name="board"/>
+  <include filename="KrangBlocks.urdf" model_name="krang"/>
+  <include filename="hugeLever.urdf" model_name="hugeLever"/>
+  <include filename="midLever.urdf" model_name="midLever"/>
+  
+  <entity model="doorAndWall" name="doorAndWall">
+    <origin xyz="-1.3 1.25 1.21" rpy="1.57 0 1.57"/>
+  </entity>
+
+  <entity model="wall" name="wall">
+    <origin xyz="6.1 1.25 1.21" rpy="1.57 0 1.57"/>
+  </entity>
+  
+  <entity model="hugeLever" name="hugeLever">
+    <origin xyz="15 0.0 0.05" rpy="0.0 0 0"/>
+  </entity>
+
+  <entity model="glassDiningTable2" name="glassDiningTable2">
+    <origin xyz="0.40 -2.0 0.45" rpy="1.57 0.0 0.0"/>
+  </entity>
+
+  <entity model="cart" name="cart">
+    <origin xyz="3.5 -2.3 0.41" rpy="1.57 0 0.0"/>
+  </entity>
+
+ <entity model="board" name="board">
+    <origin xyz="0.5 -1.7 0.59" rpy="1.57 0 -0.2"/>
+  </entity>
+
+  <entity model="midLever" name="midLever">
+    <origin xyz="-0.6 -2.2 0.82" rpy="0 0 0.05"/>
+  </entity>
+  
+  <entity model="krang" name="krang">
+    <origin xyz="2.3 -5.0 6.3" rpy="1.57 0 0"/>
+  </entity>
+
+  
+</world>

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot name="door">
+  <link name="door">
+		<inertial>
+		  <origin xyz="0.00 0.00 0.00" rpy="0 0 0"/>
+		  <mass value="41.3256"/>
+		  <inertia ixx="14.2053" ixy="0.0004" ixz="0.0" iyy="17.1997" iyz="0.0" izz="3.0298" />
+		</inertial>
+		<visual> <geometry> <mesh filename="objects/door.dae" /> </geometry> </visual>
+		<collision> <geometry> <mesh filename="objects/door.dae" /> </geometry> </collision>
+  </link>
+</robot>

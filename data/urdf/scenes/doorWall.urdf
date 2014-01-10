@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<robot name="doorAndWall">
+  <link name="world" />
+
+  <link name="door">
+		<inertial>
+		  <mass value="41.3256"/>
+		  <inertia ixx="14.2053" ixy="0.0004" ixz="0.0" iyy="17.1997" iyz="0.0" izz="3.0298" />
+		</inertial>
+		<visual> <geometry> <mesh filename="objects/doorCenter2.3ds" /> </geometry> </visual>
+		<collision> <geometry> <mesh filename="objects/doorCenter2.3ds" /> </geometry> </collision>
+  </link>
+  
+  <link name="wall">
+		<visual> <geometry> <mesh filename="objects/wallCenter.3ds" /> </geometry> </visual>
+		<collision> <geometry> <mesh filename="objects/wallCenter.3ds" /> </geometry> </collision>
+  </link>
+  
+  
+  	<joint name="worldWall"  type="fixed">
+		<origin xyz="0 0 0" rpy="0 0 0" />
+		<parent link="world"/>
+		<child link="wall"/>
+	</joint>
+    
+  	<joint name="doorWall" type="revolute"> <parent link="wall" /> <child link="door" />
+		<origin xyz="0 0 3.05" rpy="0 0 0" />
+		<axis xyz="0 1 0" /> 
+		<limit effort="1000" lower="-1.57" upper="1.57" velocity="0.1" />
+	</joint>
+	
+</robot>

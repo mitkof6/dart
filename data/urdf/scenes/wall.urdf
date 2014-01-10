@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<robot name="wall">
+  <link name="world" />
+
+  <link name="wall">
+		<visual> <geometry> <mesh filename="objects/wall.3ds" /> </geometry> </visual>
+		<collision> <geometry> <mesh filename="objects/wall.3ds" /> </geometry> </collision>
+  </link>
+
+  	<joint name="worldWall"  type="fixed">
+		<origin xyz="0 0 0" rpy="0 0 0" />
+		<parent link="world"/>
+		<child link="wall"/>
+	</joint>
+  
+  </robot>

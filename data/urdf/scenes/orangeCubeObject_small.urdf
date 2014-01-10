@@ -1,0 +1,24 @@
+<!-- cubeObject.urdf -->
+
+<robot name="orangeCube_111_2">
+
+	<!-- Link 0 -->
+	<link name="link_0">
+		<inertial>
+			<mass value="0.1" />
+			<inertia ixx="0.000167" ixy="0.0" ixz="0.0" iyy="0.000167" iyz="0.0" izz="0.000167" />
+			<origin xyz="0 0 0" />
+		</inertial>
+		<visual>
+			<geometry>
+				<mesh filename="objects/orangeCube_111_2.3ds"/>
+			</geometry>
+		</visual>
+		<collision>
+			<geometry>
+				<mesh filename="objects/orangeCube_111_2.3ds"/>
+			</geometry>
+		</collision>
+	</link>
+
+</robot>
