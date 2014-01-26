@@ -14,6 +14,7 @@ foreach(APPDIR
     #hybrid
     #hanging
     hardcodedDesign
+    hoop
     #closedLoop
     testBed
     sdfLoader
